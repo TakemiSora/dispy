@@ -34,7 +34,7 @@ class Asset:
         if avatar_decoration_hash is not None:
             is_animated = avatar_decoration_hash.startswith("a_")
             return cls(
-                f"{cls.CDN_URL}/avatar-decoration-presets/{avatar_decoration_hash}.webp{"?animated=true" if is_animated else ""}",
+                f"{cls.CDN_URL}/avatar-decoration-presets/{avatar_decoration_hash}.png",
                 state, is_animated
             )
         return None

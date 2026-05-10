@@ -1,24 +1,37 @@
 import aiohttp
+import asyncio
 from .http import State
 from .managers import Users
+from .gateway import GatewayClient
+from .flags import IntentFlags
 
 class Bot:
     def __init__(
         self,
-        token: str
+        token: str,
+        intents: IntentFlags
     ):
         self.token = token
         self._state = State()
-        self.users = Users()
+        self._gateway_client = GatewayClient(token, intents)
+        self.users = Users(self._state)
 
-    async def connect(self) -> None:
-        self._state.session = aiohttp.ClientSession(
-            "https://discord.com/api/v10/",
-            headers={
-                "Authorization": f"Bot {self.token}"
-            }
-        )
+    def run(self) -> None:
+        asyncio.run(self.start())
 
-    async def close(self) -> None:
-        if self._state.session is not None:
-            await self._state.session.close()
+    async def start(self) -> None:
+        try:
+            self._state.session = aiohttp.ClientSession(
+                "https://discord.com/api/v10/",
+                headers={
+                    "Authorization": f"Bot {self.token}"
+                }
+            )
+            await self._gateway_client.connect()
+            await self._gateway_client.wait_until_closed()
+        finally:
+            await self.stop()
+
+    async def stop(self) -> None:
+        await self._gateway_client.close()
+        await self._state.session.close()

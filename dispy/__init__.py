@@ -3,7 +3,7 @@ from .avatar_decoration import AvatarDecoration
 from .bot import Bot
 from .collectibles import Nameplate
 from .enums import NitroType
-from .flags import UserFlags
+from .flags import UserFlags, RoleFlags, IntentFlags
 from .primary_guild import UserPrimaryGuild
 from .user import User
 from .http import Path

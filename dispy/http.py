@@ -34,8 +34,8 @@ class RateLimitBucket:
         self.reset_after = float(headers.get("X-RateLimit-Reset-After", 0.1))
 
 class State:
-    def __init__(self, session: aiohttp.ClientSession | None = None):
-        self.session = session
+    def __init__(self):
+        self.session: aiohttp.ClientSession | None = None
 
         self._global_ratelimit = asyncio.Event()
         self._global_ratelimit.set()

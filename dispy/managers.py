@@ -1,5 +1,5 @@
 from .user import User
-from .state import State
+from .http import State, Path
 
 class Users:
     def __init__(self, state: State):
@@ -7,6 +7,5 @@ class Users:
 
     async def fetch(self, user_id: int) -> User:
         return User(self._state, await self._state.request(
-            "GET",
-            f"users/{user_id}"
+            Path("GET", "users/{user_id}", user_id=user_id)
         ))

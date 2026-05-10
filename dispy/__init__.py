@@ -6,3 +6,4 @@ from .enums import NitroType
 from .flags import UserFlags
 from .primary_guild import UserPrimaryGuild
 from .user import User
+from .http import Path

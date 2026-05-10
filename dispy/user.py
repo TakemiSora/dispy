@@ -2,7 +2,7 @@ from typing import Any
 from .asset import Asset
 from .flags import UserFlags
 from .enums import NitroType
-from .state import State
+from .http import State
 from .collectibles import Nameplate
 from .primary_guild import UserPrimaryGuild
 from .avatar_decoration import AvatarDecoration
@@ -37,6 +37,9 @@ class User:
 
     @property
     def nitro(self) -> NitroType | None:
+        """
+        Returns `NitroType.NONE` if the user has no Nitro or you are missing `identify.premium` scope.
+        """
         if self._nitro_type is None:
             return None
         return NitroType(self._nitro_type)

@@ -1,7 +1,5 @@
 import aiohttp
-from typing import Any
-from .user import User
-from .state import State
+from .http import State
 from .managers import Users
 
 class Bot:

@@ -22,3 +22,6 @@ class UserFlags(IntFlag):
         if flags is not None:
             return cls(flags)
         return None
+
+class RoleFlags(IntFlag):
+    IN_PROMPT = 1 << 0

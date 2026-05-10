@@ -1,13 +1,14 @@
 from __future__ import annotations
 from typing import Any
 from .asset import Asset
-from .state import State
+from .http import State
+from .snowflake import Snowflake
 
-class AvatarDecoration:
+class AvatarDecoration(Snowflake):
     def __init__(self, state: State, data: dict[str, Any]):
         self._state = state
 
-        self.sku_id: int = int(data["sku_id"])
+        super().__init__(int(data["sku_id"]))
         self.asset = Asset._from_user_avatar_decoration(state, data["asset"])
 
     @classmethod

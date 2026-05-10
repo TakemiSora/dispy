@@ -2,13 +2,12 @@ from __future__ import annotations
 from typing import Any
 from .asset import Asset
 from .http import State
-from .snowflake import Snowflake
 
-class AvatarDecoration(Snowflake):
+class AvatarDecoration:
     def __init__(self, state: State, data: dict[str, Any]):
         self._state = state
 
-        super().__init__(int(data["sku_id"]))
+        self.sku_id = int(data["sku_id"])
         self.asset = Asset._from_user_avatar_decoration(state, data["asset"])
 
     @classmethod
@@ -16,3 +15,11 @@ class AvatarDecoration(Snowflake):
         if data is not None:
             return cls(state, data)
         return None
+
+    def __eq__(self, obj: object) -> bool:
+        if isinstance(obj, self.__class__):
+            return self.sku_id == obj.sku_id
+        return NotImplemented
+    
+    def __hash__(self) -> int:
+        return self.sku_id

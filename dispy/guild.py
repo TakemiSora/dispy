@@ -1,14 +1,13 @@
 from typing import Any
 from .http import State
 from .asset import Asset
-from .snowflake import Snowflake
 from .enums import GuildVerificationLevel, GuildNotificationLevel, GuildExplicitContentLevel
 
-class Guild(Snowflake):
+class Guild:
     def __init__(self, state: State, data: dict[str, Any]):
         self._state = state
 
-        super().__init__(int(data["id"]))
+        self.id = int(data["id"])
         self.name: str = data["name"]
         self.icon = Asset._from_guild_avatar(state, self.id, data.get("icon"))
         self.splash = Asset._from_guild_splash(state, self.id, data.get("splash")) 
@@ -23,3 +22,11 @@ class Guild(Snowflake):
 
     def __str__(self) -> str:
         return self.name
+    
+    def __eq__(self, obj: object) -> bool:
+        if isinstance(obj, self.__class__):
+            return self.sku_id == obj.sku_id
+        return NotImplemented
+    
+    def __hash__(self) -> int:
+        return self.sku_id

@@ -34,6 +34,14 @@ class User:
 
     def __str__(self) -> str:
         return self.name
+    
+    def __eq__(self, obj: object) -> bool:
+        if isinstance(obj, self.__class__):
+            return self.id == obj.id
+        return NotImplemented
+    
+    def __hash__(self) -> int:
+        return self.id
 
     @property
     def nitro(self) -> NitroType | None:

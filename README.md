@@ -9,9 +9,8 @@ I aim for this library to closely mirror the discord API.
 import dispy
 
 bot = dispy.Bot(
-    "TOKEN-HERE",
      intents=dispy.IntentFlags.standard()
 )
 
-bot.run()
+bot.run("TOKEN-HERE")
 ```

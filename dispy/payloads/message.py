@@ -109,7 +109,7 @@ class PollResultsPayload(TypedDict):
     is_finalized: bool
     answer_counts: list[PollAnswerCountPayload]
     
-class PollPaylaod(TypedDict):
+class PollPayload(TypedDict):
     question: PollMediaPayload
     answers: list[PollAnswerPayload]
     expiry: ISO8601Timestamp | None
@@ -117,7 +117,7 @@ class PollPaylaod(TypedDict):
     layout_type: Literal[1]
     results: NotRequired[PollResultsPayload]
     
-class SharedClientThemePaylaod(TypedDict):
+class SharedClientThemePayload(TypedDict):
     colors: list[str]
     gradient_angle: int
     base_mix: int
@@ -157,6 +157,6 @@ class MessagePayload(BaseMessagePayload, total=False):
     position: int
     role_subscription_data: RoleSubscriptionDataPayload
     # resolved object currently Skipped
-    poll: PollPaylaod
+    poll: PollPayload
     # call skipped as never accessible
-    shared_client_theme: SharedClientThemePaylaod
+    shared_client_theme: SharedClientThemePayload

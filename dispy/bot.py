@@ -5,6 +5,7 @@ from .managers import Users, Messages, Channels, Guilds
 from .gateway import GatewayClient
 from .flags import IntentFlags
 from .errors import Unauthorized, ImproperToken
+from .cache import CacheSettings, CacheStorage
 
 __all__ = (
     "Bot",
@@ -24,15 +25,20 @@ class Bot:
     
     def __init__(
         self,
-        intents: IntentFlags
+        intents: IntentFlags,
+        cache_settings: CacheSettings | None = None
     ):
         self.intents = intents
         self.http = HTTPClient()
         self.gateway: GatewayClient | None = None
-        self.users = Users(self.http)
-        self.messages = Messages(self.http)
-        self.channels = Channels(self.http)
-        self.guilds = Guilds(self.http)
+
+        storage = CacheStorage(cache_settings or CacheSettings())
+        storage.start_cleanup_tasks()
+
+        self.users = Users(self.http, storage)
+        self.messages = Messages(self.http, storage)
+        self.channels = Channels(self.http, storage)
+        self.guilds = Guilds(self.http, storage)
         
         self._session: aiohttp.ClientSession | None = None
 

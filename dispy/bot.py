@@ -16,6 +16,7 @@ class Bot:
         "intents",
         "http",
         "gateway",
+        "storage",
         "users",
         "messages",
         "channels",
@@ -32,13 +33,11 @@ class Bot:
         self.http = HTTPClient()
         self.gateway: GatewayClient | None = None
 
-        storage = CacheStorage(cache_settings or CacheSettings())
-        storage.start_cleanup_tasks()
-
-        self.users = Users(self.http, storage)
-        self.messages = Messages(self.http, storage)
-        self.channels = Channels(self.http, storage)
-        self.guilds = Guilds(self.http, storage)
+        self.storage = CacheStorage(cache_settings or CacheSettings())
+        self.users = Users(self.http, self.storage)
+        self.messages = Messages(self.http, self.storage)
+        self.channels = Channels(self.http, self.storage)
+        self.guilds = Guilds(self.http, self.storage)
         
         self._session: aiohttp.ClientSession | None = None
 
@@ -53,6 +52,7 @@ class Bot:
 
     async def start(self, token: str) -> None:
         try:
+            self.storage.start_cleanup_tasks()
             self._session = aiohttp.ClientSession(
                 "https://discord.com/api/v10/",
                 headers={

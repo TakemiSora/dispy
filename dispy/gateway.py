@@ -29,7 +29,7 @@ class GatewayClient:
         "_session",
         "_closed",
         "_reconnect_lock",
-        "_handlers"
+        "_handlers",
     )
     
     URL = "wss://gateway.discord.gg/?v=10&encoding=json"
@@ -88,6 +88,12 @@ class GatewayClient:
     async def connect(self, resume_url: str | None = None):
         self._ws = await self._session.ws_connect(resume_url or self.URL)
         self._listen_task = asyncio.create_task(self._listen())
+        self._listen_task.add_done_callback(self._on_task_done)
+        
+    def _on_task_done(self, task: asyncio.Task):
+        if task.cancelled(): return
+        if task.exception() is not None:
+            self._closed.set()
 
     async def wait_until_closed(self):
         await self._closed.wait()

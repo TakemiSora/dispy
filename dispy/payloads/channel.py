@@ -42,7 +42,7 @@ class BaseChannelPayload(TypedDict):
     last_pin_timestamp: NotRequired[ISO8601Timestamp | None]
 
 class BasePublicChannelPayload(BaseChannelPayload):
-    guild_id: Snowflake
+    guild_id: NotRequired[Snowflake]
     name: str
     parent_id: NotRequired[Snowflake | None]
     rate_limit_per_user: NotRequired[int]

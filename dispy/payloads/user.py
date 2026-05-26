@@ -1,26 +1,33 @@
-from typing import TypedDict, NotRequired
+from __future__ import annotations
+from typing import Required, TypedDict, TYPE_CHECKING
+
+from ._types import CDNHash, Snowflake
 from .avatar_decoration import AvatarDecorationPayload
 from .collectibles import CollectiblePayload
 from .primary_guild import UserPrimaryGuildPayload
-from ._types import CDNHash, Snowflake
+if TYPE_CHECKING:
+    from .member import PartialMemberPayload
 
-class UserPayload(TypedDict):
+class PartialUserPayload(TypedDict):
     id: Snowflake
-    username: str
-    discriminator: str
-    global_name: str | None
-    avatar: CDNHash | None
-    bot: NotRequired[bool]
-    system: NotRequired[bool]
-    mfa_enabled: NotRequired[bool]
-    banner: NotRequired[CDNHash | None]
-    accent_color: NotRequired[int | None]
-    locale: NotRequired[str]
-    verified: NotRequired[bool]
-    email: NotRequired[str | None]
-    flags: NotRequired[int]
-    premium_type: NotRequired[int]
-    public_flags: NotRequired[int]
-    avatar_decoration_data: NotRequired[AvatarDecorationPayload | None]
-    collectibles: NotRequired[CollectiblePayload | None]
-    primary_guild: NotRequired[UserPrimaryGuildPayload | None]
+
+class UserPayload(PartialUserPayload, total=False):
+    username: Required[str]
+    discriminator: Required[str]
+    global_name: Required[str | None]
+    avatar: Required[CDNHash | None]
+    bot: bool
+    system: bool
+    mfa_enabled: bool
+    banner: CDNHash | None
+    accent_color: int | None
+    locale: str
+    verified: bool
+    email: str | None
+    flags: int
+    premium_type: int
+    public_flags: int
+    avatar_decoration_data: AvatarDecorationPayload | None
+    collectibles: CollectiblePayload | None
+    primary_guild: UserPrimaryGuildPayload | None
+    member: PartialMemberPayload

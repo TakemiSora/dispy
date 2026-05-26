@@ -113,9 +113,9 @@ class BasePublicChannel(BaseChannel):
         "permissions",
     )
 
-    def __init__(self, data: BasePublicChannelPayload):
+    def __init__(self, data: BasePublicChannelPayload, guild_id: int | None = None):
         super().__init__(data)
-        self.guild_id = Snowflake(data["guild_id"])
+        self.guild_id = Snowflake._from_str(str(guild_id) or data.get("guild_id"))
         self.name = data["name"]
         self.parent_id = Snowflake._from_str(data.get("parent_id"))
         self.rate_limit_per_user = data.get("rate_limit_per_user")
@@ -139,8 +139,8 @@ class GuildChannel(BasePublicChannel):
         "default_forum_layout",
     )
 
-    def __init__(self, data: GuildChannelPayload):
-        super().__init__(data)
+    def __init__(self, data: GuildChannelPayload, guild_id: int | None = None):
+        super().__init__(data, guild_id)
         self.type = ChannelType(data["type"])
         self.topic = data.get("topic")
         self.default_auto_archive_duration = data.get("default_auto_archive_duration")
@@ -163,8 +163,8 @@ class ThreadChannel(BasePublicChannel):
         "applied_tags",
     )
     
-    def __init__(self, data: ThreadPayload):
-        super().__init__(data)
+    def __init__(self, data: ThreadPayload, guild_id: int | None = None):
+        super().__init__(data, guild_id)
         self.type = ChannelType(data["type"])
         self.owner_id = Snowflake(data["owner_id"])
         self.thread_metadata = ThreadMetaData(data["thread_metadata"])
@@ -199,15 +199,15 @@ class ChannelMention:
         self.name = data["name"]
 
 @overload
-def parse_channel_payload(data: GuildChannelPayload) -> GuildChannel: ...
+def parse_channel_payload(data: GuildChannelPayload, guild_id: int | None = None) -> GuildChannel: ...
 
 @overload
-def parse_channel_payload(data: ThreadPayload) -> ThreadChannel: ...
+def parse_channel_payload(data: ThreadPayload, guild_id: int | None = None) -> ThreadChannel: ...
 
 @overload
 def parse_channel_payload(data: PrivateChannelPayload) -> PrivateChannel: ...
 
-def parse_channel_payload(data: GuildChannelPayload | ThreadPayload | PrivateChannelPayload) -> GuildChannel | ThreadChannel | PrivateChannel:
+def parse_channel_payload(data: GuildChannelPayload | ThreadPayload | PrivateChannelPayload, guild_id: int | None = None) -> GuildChannel | ThreadChannel | PrivateChannel:
     match ChannelType(data["type"]):
         case ChannelType.DM:
             return PrivateChannel(cast(PrivateChannelPayload, data))
@@ -216,7 +216,7 @@ def parse_channel_payload(data: GuildChannelPayload | ThreadPayload | PrivateCha
             | ChannelType.PUBLIC_THREAD
             | ChannelType.PRIVATE_THREAD
         ):
-            return ThreadChannel(cast(ThreadPayload, data))
+            return ThreadChannel(cast(ThreadPayload, data), guild_id)
         case (
             ChannelType.GUILD_TEXT
             | ChannelType.GUILD_VOICE
@@ -228,7 +228,7 @@ def parse_channel_payload(data: GuildChannelPayload | ThreadPayload | PrivateCha
             | ChannelType.GUILD_FORUM
             | ChannelType.GUILD_MEDIA
         ):
-            return GuildChannel(cast(GuildChannelPayload, data))
+            return GuildChannel(cast(GuildChannelPayload, data), guild_id)
         case _:
             raise UnknownChannelType(data["type"])
 

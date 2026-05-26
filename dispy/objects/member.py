@@ -8,6 +8,7 @@ from ..utils import siso, sint, scls
 from .avatar_decoration import AvatarDecoration
 from .collectibles import Nameplate
 from .snowflake import Snowflake
+from typing import overload
 
 __all__ = (
     "Member",
@@ -34,16 +35,20 @@ class Member:
         "nameplate"
     )
 
-    def __init__(self, data: MemberPayload, *, guild_id: int, user_id: int):
-        user = data.get("user")
-        if user:
-            self.user = User(user)
-        else:
-            self.user = None
+    @overload
+    def __init__(self, data: MemberPayload, *, guild_id: int, user_id: None = None) -> None: ...
+
+    @overload
+    def __init__(self, data: MemberPayload, *, guild_id: int, user_id: int) -> None: ...
+
+    def __init__(self, data: MemberPayload, *, guild_id: int, user_id: int | None = None):
+        self.user = scls(User, data.get("user"))
+        user_id = int(self.user.id) if self.user is not None else user_id
+        if user_id is None:
+            raise ValueError("Both user object and user_id cannot be None for a member object.")
 
         self.guild_id = Snowflake(guild_id)
-        self.id = Snowflake(user_id)
-
+        self.id = Snowflake()
         self.nick = data.get("nick")
         self.asset = Asset._from_member_avatar(guild_id, user_id, data.get("avatar"))
         self.banner = Asset._from_member_banner(guild_id, user_id, data.get("banner"))

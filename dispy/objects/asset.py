@@ -147,3 +147,41 @@ class Asset:
                 is_animated
             )
         return None
+        
+    @classmethod
+    def _from_application_asset(cls, application_id: int | None, asset_hash: str | None) -> Self | None:
+        if application_id is not None and asset_hash is not None:
+            return cls(
+                f"{cls.CDN_URL}/app-assets/{application_id}/{asset_hash}",
+                False
+            )
+        return None
+        
+    @classmethod
+    def _from_guild_scheduled_event_cover(cls, event_id: int, cover_hash: str | None) -> Self | None:
+        if cover_hash is not None:
+            return cls(
+                f"{cls.CDN_URL}/guild-events/{event_id}/{cover_hash}.webp",
+                False
+            )
+        return None
+        
+class MediaProxyAsset:
+    __slots__ = (
+        "url",
+    )
+    
+    def __init__(self, url: str):
+        self.url = url
+            
+    @classmethod
+    def _from_image_id(cls, image_id: str | None) -> Self | None:
+        if image_id is not None:
+            return cls(f"https://media.discordapp.net/{image_id}")
+        return None
+        
+def activity_asset_parse(application_id: int | None, avatar_hash: str | None) -> MediaProxyAsset | Asset | None:
+    if avatar_hash is not None:
+        if avatar_hash.startswith("mp:"):
+            return MediaProxyAsset._from_image_id(avatar_hash[3:])
+        return Asset._from_application_asset(application_id, avatar_hash)

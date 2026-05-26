@@ -8,6 +8,11 @@ __all__ = (
     "GuildPremiumTier",
     "GuildNSFWLevel",
     "GuildFeature",
+    "GuildScheduledEventStatus",
+    "GuildScheduledEventEntityType",
+    "EventRecurrenceRuleFrequency",
+    "EventRecurrenceRuleMonth",
+    "EventRecurrenceRuleWeekday"
 )
     
 class GuildVerificationLevel(IntEnum):
@@ -75,3 +80,43 @@ class GuildFeature(StrEnum):
     GUESTS_ENABLED = "GUESTS_ENABLED"
     GUILD_TAGS = "GUILD_TAGS"
     ENHANCED_ROLE_COLORS = "ENHANCED_ROLE_COLORS"
+
+class GuildScheduledEventStatus(IntEnum):
+    SCHEDULED = 1
+    ACTIVE = 2
+    COMPLETED = 3
+    CANCELED = 4
+    
+class GuildScheduledEventEntityType(IntEnum):
+    STAGE_INSTANCE = 1
+    VOICE = 2
+    EXTERNAL = 3
+    
+class EventRecurrenceRuleFrequency(IntEnum):
+    YEARLY = 0
+    MONTHLY = 1
+    WEEKLY = 2
+    DAILY = 3
+    
+class EventRecurrenceRuleWeekday(IntEnum):
+    MONDAY = 0
+    TUESDAY = 1
+    WEDNESDAY = 2
+    THURSDAY = 3
+    FRIDAY = 4
+    SATURDAY = 5
+    SUNDAY =  6
+    
+class EventRecurrenceRuleMonth(IntEnum):
+    JANUARY = 1
+    FEBRUARY = 2
+    MARCH = 3
+    APRIL = 4
+    MAY = 5
+    JUNE = 6
+    JULY = 7
+    AUGUST = 8
+    SEPTEMBER = 9
+    OCTOBER = 10
+    NOVEMBER = 11
+    DECEMBER = 12

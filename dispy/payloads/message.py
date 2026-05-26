@@ -1,13 +1,11 @@
 from __future__ import annotations
-from typing import Any, Required, TypedDict, NotRequired, Literal
-from ._types import ISO8601Timestamp, Snowflake
+from typing import Required, TypedDict, NotRequired, Literal
+from ._types import ISO8601Timestamp, Snowflake, UNIMPLEMENTED
 from .user import UserPayload
-from .channel import ChannelMentionPayload, PartialGuildChannelPayload, ThreadPayload
+from .channel import ChannelMentionPayload, ThreadPayload
 from .emoji import PartialEmojiPayload
 from .embed import EmbedPayload
 from .sticker import PartialStickerPayload
-from .member import PartialMemberPayload
-from .role import RolePayload
 
 class AttachmentPayload(TypedDict, total=False):
     id: Required[Snowflake]
@@ -28,7 +26,7 @@ class AttachmentPayload(TypedDict, total=False):
     flags: int
     clip_participants: list[UserPayload]
     clip_created_at: ISO8601Timestamp
-    application: dict[str, Any]
+    application: UNIMPLEMENTED
 
 class ReactionCountDetailPayload(TypedDict):
     burst: int
@@ -130,14 +128,14 @@ class MessagePayload(PartialMessagePayload, total=False):
     pinned: Required[bool]
     webhook_id: Snowflake
     activity: MessageActivityPayload
-    application: dict[str, Any]
+    application: UNIMPLEMENTED
     application_id: Snowflake
     message_reference: MessageReferencePayload
     message_snapshots: list[MessageSnapshotPayload]
     referenced_message: MessagePayload | None
     interaction_metadata: MessageInteractionMetadataPayload
     thread: ThreadPayload
-    components: list[dict[str, Any]]
+    components: list[UNIMPLEMENTED]
     sticker_items: list[PartialStickerPayload]
     position: int
     role_subscription_data: RoleSubscriptionDataPayload

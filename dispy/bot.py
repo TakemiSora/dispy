@@ -1,5 +1,6 @@
 import aiohttp
 import asyncio
+import inspect
 from .http import HTTPClient, Path
 from .managers import Users, Messages, Channels, Guilds
 from .gateway import GatewayClient
@@ -70,18 +71,21 @@ class Bot:
             await self.gateway.connect()
             await self.gateway.wait_until_closed()
         except asyncio.CancelledError:
-            pass
+            raise
         finally:
             await self.stop()
 
     async def stop(self) -> None:
-        if self.gateway:
-            await self.gateway.close()
-        if self._session:
-            await self._session.close()
+        try:
+            if self.gateway:
+                await self.gateway.close()
+        finally:
+            if self._session:
+                await self._session.close()
 
     def listen(self, name: str | None = None):
         def decorator(func: CoroFunc) -> CoroFunc:
+            if not inspect.iscoroutinefunction(func): raise TypeError(f"Event listener '{func.__name__}' has to be a coroutine function.")
             self._listeners.setdefault(name or func.__name__, []).append(func)
             return func
         return decorator

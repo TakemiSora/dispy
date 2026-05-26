@@ -11,7 +11,7 @@ __all__ = (
 class ChannelType(IntEnum):
     GUILD_TEXT = 0
     DM = 1
-    GUILD_VOICE = 1
+    GUILD_VOICE = 2
     GROUP_DM = 3
     GUILD_CATEGORY = 4
     GUILD_ANNOUNCEMENT = 5

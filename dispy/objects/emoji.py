@@ -2,18 +2,31 @@ from .user import User
 from .asset import Asset
 from .snowflake import Snowflake
 from datetime import datetime
-from ..payloads.emoji import PartialEmojiPayload, EmojiPayload
+from ..payloads.emoji import PartialEmojiPayload, EmojiPayload, ActivityEmojiPayload
 from ..payloads.channel import DefaultReactionPayload
 from ..payloads.message import ReactionCountDetailPayload, ReactionPayload
 from ..utils import scls
 
 __all__ = (
+    "ActivityEmoji",
     "PartialEmoji",
     "Emoji",
     "DefaultReaction",
     "Reaction",
     "ReactionCountDetail"
 )
+
+class ActivityEmoji:
+    __slots__ = (
+        "id",
+        "name",
+        "animated"
+    )
+    
+    def __init__(self, data: ActivityEmojiPayload):
+        self.id = Snowflake._from_str(data.get("id"))
+        self.name = data["name"]
+        self.animated = data.get("animated", False)
 
 class PartialEmoji:
     __slots__ = (

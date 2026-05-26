@@ -111,6 +111,8 @@ class CacheStorage:
         )
     
     def update_guilds(self, guild: Guild) -> Guild:
+        for c in guild.channels: self.update_channels(c)
+        for t in guild.threads: self.update_channels(t)
         return self._add_to_cache(
             self.settings.guilds,
             self.settings.max_guilds_store,
@@ -134,20 +136,20 @@ class CacheStorage:
         return self._get_from_cache(self.guilds, guild_id)
 
 
-    def _remove_from_cache[T: Cachable](self, cache: dict[int, CacheEntry[T]], id: int) -> None:
-        cache.pop(id, None)
+    def _remove_from_cache[T: Cachable](self, cache: dict[int, CacheEntry[T]], id: int) -> T | None:
+        return o.data if (o := cache.pop(id, None)) else None
 
-    def remove_user(self, user_id: int) -> None:
-        self._remove_from_cache(self.users, user_id)
+    def remove_user(self, user_id: int) -> User | None:
+        return self._remove_from_cache(self.users, user_id)
     
-    def remove_message(self, message_id: int) -> None:
-        self._remove_from_cache(self.messages, message_id)
+    def remove_message(self, message_id: int) -> Message | None:
+        return self._remove_from_cache(self.messages, message_id)
 
-    def remove_channel(self, channel_id: int) -> None:
-        self._remove_from_cache(self.channels, channel_id)
+    def remove_channel(self, channel_id: int) -> Channel | None:
+        return self._remove_from_cache(self.channels, channel_id)
 
-    def remove_guild(self, guild_id: int) -> None:
-        self._remove_from_cache(self.guilds, guild_id)
+    def remove_guild(self, guild_id: int) -> Guild | None:
+        return self._remove_from_cache(self.guilds, guild_id)
 
 
     async def _cleanup_cache[T: Cachable](self, cache: dict[int, CacheEntry[T]]):

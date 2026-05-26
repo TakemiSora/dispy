@@ -6,16 +6,35 @@ from .primary_guild import UserPrimaryGuild
 from .avatar_decoration import AvatarDecoration
 from .snowflake import Snowflake
 from datetime import datetime
-from ..payloads.user import UserPayload
+from ..payloads.user import PartialUserPayload, UserPayload
 from ..utils import scls
 
 __all__ = (
     "User",
 )
 
-class User:
+class PartialUser:
     __slots__ = (
         "id",
+    )
+
+    def __init__(self, data: PartialUserPayload):
+        self.id = Snowflake(data["id"])
+
+    def __eq__(self, obj: object) -> bool:
+        if isinstance(obj, self.__class__):
+            return self.id == obj.id
+        return NotImplemented
+    
+    def __hash__(self) -> int:
+        return self.id
+            
+    @property
+    def created_at(self) -> datetime:
+        return self.id.created_at
+
+class User(PartialUser):
+    __slots__ = (
         "name",
         "discriminator",
         "global_name",
@@ -32,10 +51,11 @@ class User:
         "_premium_type",
         "avatar_decoration",
         "nameplate",
-        "primary_guild"
+        "primary_guild",
+        "member"
     )
     def __init__(self, data: UserPayload):
-        self.id = Snowflake(data["id"])
+        super().__init__(data)
         self.name = data["username"]
         self.discriminator = data["discriminator"]
         self.global_name  = data["global_name"]
@@ -58,18 +78,6 @@ class User:
     def __str__(self) -> str:
         return self.name
     
-    def __eq__(self, obj: object) -> bool:
-        if isinstance(obj, self.__class__):
-            return self.id == obj.id
-        return NotImplemented
-    
-    def __hash__(self) -> int:
-        return self.id
-            
-    @property
-    def created_at(self) -> datetime:
-        return self.id.created_at
-
     @property
     def premium(self) -> PremiumType | None:
         """

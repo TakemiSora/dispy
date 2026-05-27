@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import NotRequired, Required, TypedDict, Literal
-from ._types import Snowflake
+from ._types import Snowflake, Permissions
 
 class CommandChoicePayload(TypedDict):
     name: str
@@ -32,3 +32,10 @@ class ApplicationCommandPayload(TypedDict):
     name_localizations: dict[str, str] | None
     description: Required[str]
     description_localizations: dict[str, str] | None
+    options: list[CommandOptionPayload]
+    default_member_permissions: Required[Permissions | None]
+    nsfw: bool
+    integration_types: list[Literal[0, 1]]
+    contexts: list[Literal[0, 1, 2]] | None
+    version: Snowflake
+    handler: Literal[1, 2]

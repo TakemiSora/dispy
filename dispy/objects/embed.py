@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Self
+
 from ..payloads.embed import (
     EmbedAuthorPayload,
     EmbedFieldPayload,
@@ -18,6 +21,10 @@ from ..flags import (
 from ..utils import siso, scls
 
 __all__ = (
+    "EmbedFooter",
+    "EmbedImage",
+    "EmbedAuthor",
+    "EmbedField",
     "Embed",
 )
 
@@ -32,6 +39,21 @@ class EmbedFooter:
         self.text = data["text"]
         self.icon_url = data.get("icon_url")
         self.proxy_icon_url = data.get("proxy_icon_url")
+
+    def _to_dict(self) -> EmbedFooterPayload:
+        footer = EmbedFooterPayload(text=self.text)
+        if self.icon_url is not None: footer["icon_url"] = self.icon_url
+        return footer
+
+    @classmethod
+    def new(
+        cls, *,
+        text: str,
+        icon_url: str | None = None
+    ) -> Self:
+        footer = cls(EmbedFooterPayload(text=text))
+        footer.icon_url = icon_url
+        return footer
 
 class EmbedMedia:
     __slots__ = (
@@ -63,6 +85,13 @@ class EmbedImage(EmbedMedia):
     def __init__(self, data: EmbedImagePayload):
         super().__init__(data)
         self.url = data["url"]
+
+    def _to_dict(self) -> EmbedImagePayload:
+        return EmbedImagePayload(url=self.url)
+
+    @classmethod
+    def new(cls, *, url: str) -> Self:
+        return cls(EmbedImagePayload(url=url))
 
 class EmbedVideo(EmbedMedia):
     __slots__ = (
@@ -97,6 +126,18 @@ class EmbedAuthor:
         self.icon_url = data.get("icon_url")
         self.proxy_icon_url = data.get("proxy_icon_url")
 
+    @classmethod
+    def new(
+        cls, *,
+        name: str,
+        url: str | None = None,
+        icon_url: str | None,
+    ) -> Self:
+        author = cls(EmbedAuthorPayload(name=name))
+        author.url = url
+        author.icon_url= icon_url
+        return author
+
 class EmbedField:
     __slots__ = (
         "name",
@@ -108,6 +149,26 @@ class EmbedField:
         self.name = data["name"]
         self.value = data["value"]
         self.inline = data.get("inline", False)
+
+    def _to_dict(self) -> EmbedFieldPayload:
+        return EmbedFieldPayload(
+            name=self.name,
+            value=self.value,
+            inline=self.inline
+        )
+
+    @classmethod
+    def new(
+        cls, *,
+        name: str,
+        value: str,
+        inline: bool = False
+    ) -> Self:
+        return cls(EmbedFieldPayload(
+            name=name,
+            value=value,
+            inline=inline
+        ))
 
 class Embed:
     __slots__ = (
@@ -142,3 +203,41 @@ class Embed:
         self.author = scls(EmbedAuthor, data.get("author"))
         self.fields = [EmbedField(f) for f in data.get("fields", [])]
         self.flags = EmbedFlags(data.get("flags", 0))
+
+    def _to_dict(self) -> EmbedPayload:
+        embed = EmbedPayload()
+        if self.title is not None: embed["title"] = self.title
+        if self.type is not None: embed["type"] = self.type.value
+        if self.description is not None: embed["description"] = self.description
+        if self.timestamp is not None: embed["timestamp"] = self.timestamp.isoformat()
+        if self.color is not None: embed["color"] = self.color
+        if self.footer is not None: embed["footer"] = self.footer._to_dict()
+        if self.image is not None: embed["image"] = self.image._to_dict()
+        if self.thumbnail is not None: embed["thumbnail"] = self.thumbnail._to_dict()
+        if self.fields is not None: embed["fields"] = [f._to_dict() for f in self.fields]
+        return embed
+
+    @classmethod
+    def new(
+        cls, *,
+        title: str | None = None,
+        description: str | None = None,
+        timestamp: datetime | None = None,
+        color: int | None = None,
+        footer: EmbedFooter | None = None,
+        image: EmbedImage | None = None,
+        thumbnail: EmbedImage | None = None,
+        author: EmbedAuthor | None = None,
+        fields: list[EmbedField] | None = None
+    ) -> Self:
+        embed = cls(EmbedPayload(type=EmbedType.rich))
+        embed.title = title
+        embed.description = description
+        embed.timestamp = timestamp
+        embed.color = color
+        embed.footer = footer
+        embed.image = image
+        embed.thumbnail = thumbnail
+        embed.author = author
+        embed.fields = fields
+        return embed

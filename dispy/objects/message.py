@@ -1,5 +1,6 @@
 from __future__ import annotations
 from datetime import datetime
+from typing import Self
 
 from ..enums.interaction import ApplicationIntegrationType
 from ..enums.interaction import InteractionType
@@ -12,6 +13,7 @@ from ..enums.message import (
 from ..flags import AttachmentFlags, MessageFlags
 from ..payloads.message import (
     AttachmentPayload,
+    AllowedMentionsPayload,
     MessageActivityPayload,
     MessageInteractionMetadataPayload,
     MessagePayload,
@@ -48,6 +50,7 @@ __all__ = (
     "PollResult",
     "Poll",
     "SharedClientTheme",
+    "AllowedMentions",
     "Message",
 )
 
@@ -168,7 +171,7 @@ class MessageInteractionMetadata:
         self.id = Snowflake(data["id"])
         self.type = InteractionType(data["type"])
         self.user = User(data["user"])
-        self.authorizing_integration_owners = {ApplicationIntegrationType(a): Snowflake(s) for a, s in data["authorizing_integration_owners"].items()}
+        self.authorizing_integration_owners = {ApplicationIntegrationType(int(a)): Snowflake(s) for a, s in data["authorizing_integration_owners"].items()}
         self.original_response_message_id = Snowflake(data["original_response_message_id"])
         self.target_user = scls(User, data.get("target_user"))
         self.target_message_id = Snowflake._from_str(data.get("target_message_id"))
@@ -260,6 +263,28 @@ class SharedClientTheme:
         self.gradient_angle = data["gradient_angle"]
         self.base_mix = data["base_mix"]
         self.base_theme = scls(BaseThemeType, data.get("base_theme"))
+
+class AllowedMentions:
+    __slots__ = ("parse",)
+
+    def __init__(self, data: AllowedMentionsPayload):
+        self.parse = data["parse"]
+
+    def _to_dict(self) -> AllowedMentionsPayload:
+        return AllowedMentionsPayload(parse=self.parse)
+
+    @classmethod
+    def new(
+        cls, *,
+        roles: bool = True,
+        users: bool = True,
+        everyone: bool = True
+    ) -> Self:
+        parse = []
+        if roles: parse.append("roles")
+        if users: parse.append("users")
+        if everyone: parse.append("everyone")
+        return cls(AllowedMentionsPayload(parse=parse))
 
 class Message(PartialMessage):
     __slots__ = (

@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 def sint(txt: str | None) -> int | None:
     return int(txt) if txt else None

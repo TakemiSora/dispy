@@ -8,22 +8,29 @@ from ..enums.interaction import (
     InteractionContextType,
     InteractionType,
 )
-from ..errors import UnknownInteractionType
+from ..errors import (
+    UnknownInteractionType,
+    InteractionNotResponded,
+    InteractionResponded
+)
 from ..http import HTTPClient, Path
 from ..payloads.interaction import (
     ApplicationCommandInteractionOptionPayload,
     InteractionCallbackDataPayload,
+    InteractionFollowupMessageCreatePayload,
     InteractionData,
     InteractionPayload,
     InteractionResponseCallbackPayload,
     InvokedApplicationCommandPayload,
     ResolvedDataPayload,
 )
-from ..utils import scls, sint
+from ..flags import MessageFlags
+from ..utils import scls
 from .channel import parse_channel_payload
+from .embed import Embed
 from .guild import Guild
 from .member import Member, PartialMember
-from .message import Attachment, Message, PartialMessage
+from .message import Attachment, Message, PartialMessage, AllowedMentions
 from .permissions import Permissions
 from .role import Role
 from .snowflake import Snowflake
@@ -101,13 +108,23 @@ class ResponseHandler:
     __slots__ = (
         "_http",
         "interaction_id",
-        "interaction_token"
+        "interaction_token",
+        "application_id",
+        "acknowledged"
     )
     
-    def __init__(self, http: HTTPClient, interaction_id: int, interaction_token: str):
+    def __init__(
+        self,
+        http: HTTPClient,
+        interaction_id: int,
+        interaction_token: str,
+        application_id: Snowflake
+    ):
         self._http = http
         self.interaction_id = interaction_id
         self.interaction_token = interaction_token
+        self.application_id = application_id
+        self.acknowledged = False
         
     async def _post(self, type: InteractionCallbackType, data: InteractionCallbackDataPayload):
         await self._http.request(
@@ -122,19 +139,101 @@ class ResponseHandler:
                 data = data
             )
         )
-        
-    async def send_message(
+
+    async def send_response(
         self,
-        content: str | None = None
+        content: str | None = None,
+        *, tts: bool = False,
+        embeds: list[Embed] | None = None,
+        allowed_mentions: AllowedMentions = AllowedMentions.new(),
+        flags: MessageFlags = MessageFlags(0),
+        ephemeral: bool = False,
+        suppress_embeds: bool = False,
+        suppress_notifications: bool = False,
+        is_components_v2: bool = False,
+        is_voice_message: bool = False
     ):
-        if content:
-            return await self._post(
-                InteractionCallbackType.CHANNEL_MESSAGE_WITH_SOURCE,
-                InteractionCallbackDataPayload(
-                    content = content
-                )
+        if self.acknowledged:
+            raise InteractionResponded()
+        
+        if any((content, embeds)):
+            data = InteractionCallbackDataPayload(
+                tts=tts,
+                allowed_mentions=allowed_mentions._to_dict()
             )
-        raise ValueError("Missing 'content' field in responding to interaction.")
+
+            if content is not None: data["content"] = content
+            if embeds is not None: data["embeds"] = [e._to_dict() for e in embeds]
+            
+            if ephemeral: flags |= MessageFlags.EPHEMERAL
+            if suppress_embeds: flags |= MessageFlags.SUPPRESS_EMBEDS
+            if suppress_notifications: flags |= MessageFlags.SUPPRESS_NOTIFICATIONS
+            if is_components_v2: flags |= MessageFlags.IS_COMPONENTS_V2
+            if is_voice_message: flags |= MessageFlags.IS_VOICE_MESSAGE
+            if flags != 0: data["flags"] = flags
+            
+            await self._post(
+                InteractionCallbackType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data
+            )
+            self.acknowledged = True
+            return
+        
+        raise ValueError("No sendable field was passed to the response")
+    
+    async def defer(
+        self, *,
+        ephemeral: bool = False
+    ):
+        await self._post(
+            InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+            InteractionCallbackDataPayload(
+                flags = MessageFlags(MessageFlags.EPHEMERAL if ephemeral else 0)
+            )
+        )
+        self.acknowledged = True
+
+    async def send_followup(
+        self,
+        content: str | None = None,
+        *, tts: bool = False,
+        embeds: list[Embed] | None = None,
+        allowed_mentions: AllowedMentions = AllowedMentions.new(),
+        flags: MessageFlags = MessageFlags(0),
+        ephemeral: bool = False,
+        suppress_embeds: bool = False,
+        suppress_notifications: bool = False,
+        is_components_v2: bool = False,
+    ) -> Message:
+        if not self.acknowledged:
+            raise InteractionNotResponded()
+        
+        if any((content, embeds)):
+            data = InteractionFollowupMessageCreatePayload(
+                tts=tts,
+                allowed_mentions=allowed_mentions._to_dict()
+            )
+
+            if content is not None: data["content"] = content
+            if embeds is not None: data["embeds"] = [e._to_dict() for e in embeds]
+
+            if ephemeral: flags |= MessageFlags.EPHEMERAL
+            if suppress_embeds: flags |= MessageFlags.SUPPRESS_EMBEDS
+            if suppress_notifications: flags |= MessageFlags.SUPPRESS_NOTIFICATIONS
+            if is_components_v2: flags |= MessageFlags.IS_COMPONENTS_V2
+            if flags != 0: data["flags"] = flags.value
+
+            return Message(await self._http.request(
+                Path(
+                    "POST",
+                    "webhooks/{webhook_id}/{webhook_token}?with_components=true",
+                    webhook_id = self.application_id,
+                    webhook_token = self.interaction_token
+                ),
+                json = data
+            ))
+        
+        raise ValueError("No sendable field was passed to the response")
 
 class Interaction:
     __slots__ = (
@@ -183,4 +282,4 @@ class Interaction:
         self.context = scls(InteractionContextType, data.get("context"))
         self.attachment_size_limit = data["attachment_size_limit"]
         
-        self.response = ResponseHandler(http, self.id, self.token)
+        self.response = ResponseHandler(http, self.id, self.token, self.application_id)

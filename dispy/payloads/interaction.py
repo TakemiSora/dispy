@@ -11,7 +11,7 @@ from .channel import (
 from .embed import EmbedPayload
 from .guild import GuildPayload
 from .member import MemberPayload, PartialMemberPayload
-from .message import AttachmentPayload, MessagePayload, PartialMessagePayload
+from .message import AttachmentPayload, MessagePayload, PartialMessagePayload, AllowedMentionsPayload
 from .role import RolePayload
 from .user import UserPayload
 
@@ -68,9 +68,20 @@ class InteractionCallbackDataPayload(TypedDict, total=False):
     tts: bool
     content: str
     embeds: list[EmbedPayload]
-    allowed_mentions: Literal["roles", "users", "everyone"]
+    allowed_mentions: AllowedMentionsPayload
     flags: int
     components: list[UNIMPLEMENTED]
+    attachments: list[UNIMPLEMENTED]
+    poll: UNIMPLEMENTED
+
+class InteractionFollowupMessageCreatePayload(TypedDict, total=False):
+    content: str
+    tts: bool
+    embeds: list[EmbedPayload]
+    allowed_mentions: AllowedMentionsPayload
+    flags: int
+    components: list[UNIMPLEMENTED]
+    # unimplemented files
     attachments: list[UNIMPLEMENTED]
     poll: UNIMPLEMENTED
     

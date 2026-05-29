@@ -115,6 +115,9 @@ class SharedClientThemePayload(TypedDict):
 class MessageActivityPayload(TypedDict):
     type: Literal[1, 2, 3, 5]
     party_id: NotRequired[str]
+
+class AllowedMentionsPayload(TypedDict):
+    parse: list[Literal["roles", "users", "everyone"]]
         
 class MessagePayload(PartialMessagePayload, total=False):
     id: Required[Snowflake]

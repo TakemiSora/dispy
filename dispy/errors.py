@@ -5,7 +5,9 @@ __all__ = (
     "Forbidden",
     "Unauthorized",
     "ImproperToken",
-    "UnknownChannelType"
+    "UnknownChannelType",
+    "InteractionResponded",
+    "InteractionNotResponded"
 )
 
 class HTTPException(Exception):
@@ -36,4 +38,10 @@ class UnknownChannelType(Exception):
     pass
         
 class UnknownInteractionType(Exception):
+    pass
+
+class InteractionResponded(Exception):
+    pass
+
+class InteractionNotResponded(Exception):
     pass

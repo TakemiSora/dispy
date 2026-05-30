@@ -71,7 +71,7 @@ class MessageInteractionMetadataPayload(TypedDict):
     type: Literal[1, 2, 3, 4, 5]
     user: UserPayload
     authorizing_integration_owners: dict[Literal[0, 1], Snowflake]
-    original_response_message_id: Snowflake
+    original_response_message_id: NotRequired[Snowflake]
     target_user: NotRequired[UserPayload]
     target_message_id: NotRequired[Snowflake]
 

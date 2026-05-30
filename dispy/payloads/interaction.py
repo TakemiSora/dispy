@@ -74,16 +74,16 @@ class InteractionCallbackDataPayload(TypedDict, total=False):
     attachments: list[UNIMPLEMENTED]
     poll: UNIMPLEMENTED
 
-class InteractionFollowupMessageCreatePayload(TypedDict, total=False):
-    content: str
-    tts: bool
-    embeds: list[EmbedPayload]
-    allowed_mentions: AllowedMentionsPayload
-    flags: int
-    components: list[UNIMPLEMENTED]
+class InteractionWebhookMessagePayload(TypedDict, total=False):
+    content: str | None
+    tts: bool | None
+    embeds: list[EmbedPayload] | None
+    allowed_mentions: AllowedMentionsPayload | None
+    flags: int | None
+    components: list[UNIMPLEMENTED] | None
     # unimplemented files
-    attachments: list[UNIMPLEMENTED]
-    poll: UNIMPLEMENTED
+    attachments: list[UNIMPLEMENTED] | None
+    poll: UNIMPLEMENTED | None
     
 class InteractionResponseCallbackPayload(TypedDict, total=False):
     type: Literal[1, 4, 5, 6, 7, 8, 9, 10, 12]

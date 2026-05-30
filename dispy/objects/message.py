@@ -172,7 +172,7 @@ class MessageInteractionMetadata:
         self.type = InteractionType(data["type"])
         self.user = User(data["user"])
         self.authorizing_integration_owners = {ApplicationIntegrationType(int(a)): Snowflake(s) for a, s in data["authorizing_integration_owners"].items()}
-        self.original_response_message_id = Snowflake(data["original_response_message_id"])
+        self.original_response_message_id = Snowflake._from_str(data.get("original_response_message_id"))
         self.target_user = scls(User, data.get("target_user"))
         self.target_message_id = Snowflake._from_str(data.get("target_message_id"))
 

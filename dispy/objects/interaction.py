@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import cast
+from typing import cast, Any, Literal
 
 from ..enums.command import ApplicationCommandType, CommandOptionType
 from ..enums.interaction import (
@@ -17,7 +17,7 @@ from ..http import HTTPClient, Path
 from ..payloads.interaction import (
     ApplicationCommandInteractionOptionPayload,
     InteractionCallbackDataPayload,
-    InteractionFollowupMessageCreatePayload,
+    InteractionWebhookMessagePayload,
     InteractionData,
     InteractionPayload,
     InteractionResponseCallbackPayload,
@@ -25,7 +25,7 @@ from ..payloads.interaction import (
     ResolvedDataPayload,
 )
 from ..flags import MessageFlags
-from ..utils import scls
+from ..utils import scls, _MISSING
 from .channel import parse_channel_payload
 from .embed import Embed
 from .guild import Guild
@@ -209,7 +209,7 @@ class ResponseHandler:
             raise InteractionNotResponded()
         
         if any((content, embeds)):
-            data = InteractionFollowupMessageCreatePayload(
+            data = InteractionWebhookMessagePayload(
                 tts=tts,
                 allowed_mentions=allowed_mentions._to_dict()
             )
@@ -226,7 +226,7 @@ class ResponseHandler:
             return Message(await self._http.request(
                 Path(
                     "POST",
-                    "webhooks/{webhook_id}/{webhook_token}?with_components=true",
+                    "webhooks/{webhook_id}/{webhook_token}",
                     webhook_id = self.application_id,
                     webhook_token = self.interaction_token
                 ),
@@ -234,6 +234,67 @@ class ResponseHandler:
             ))
         
         raise ValueError("No sendable field was passed to the response")
+
+    async def _webhook_messages_request(
+        self, *,
+        method: str,
+        message: int | str = "@original",
+        **kwargs: Any
+    ) -> Any:
+        return await self._http.request(
+            Path(
+                method,
+                "webhooks/{webhook_id}/{webhook_token}/messages/{message}",
+                webhook_id = self.application_id,
+                webhook_token = self.interaction_token,
+                message = str(message)
+            ),
+            **kwargs
+        )
+
+    async def fetch_original_response(self) -> Message:
+        return Message(await self._webhook_messages_request(method="GET"))
+    
+    async def edit_original_response(
+        self,
+        content: str | None = _MISSING,
+        *, embeds: list[Embed] | None = _MISSING,
+        flags: MessageFlags = _MISSING,
+        allowed_mentions: AllowedMentions = _MISSING,
+        suppress_embeds: bool = _MISSING,
+        is_components_v2: Literal[True] = _MISSING
+    ) -> Message:
+        if all(
+            x is _MISSING
+            for x in [
+                content,
+                embeds,
+                flags,
+                allowed_mentions,
+                suppress_embeds,
+                is_components_v2
+            ]
+        ):
+            raise ValueError("No editable fields were passed in editing response.")
+        
+        data = InteractionWebhookMessagePayload()
+
+        if content is not _MISSING: data["content"] = content
+        if embeds is not _MISSING: data["embeds"] = [e._to_dict() for e in embeds] if embeds is not None else None
+        if allowed_mentions is not _MISSING: data["allowed_mentions"] = allowed_mentions._to_dict() if allowed_mentions is not None else None
+        if suppress_embeds is not _MISSING or is_components_v2 is not _MISSING:
+            flags = MessageFlags(0)
+            if suppress_embeds: flags |= MessageFlags.SUPPRESS_EMBEDS
+            if is_components_v2: flags |= MessageFlags.IS_COMPONENTS_V2
+            data["flags"] = flags
+            
+        return Message(await self._webhook_messages_request(
+            method="PATCH",
+            json=data
+        ))
+
+    async def delete_original_response(self):
+        await self._webhook_messages_request(method="DELETE")
 
 class Interaction:
     __slots__ = (

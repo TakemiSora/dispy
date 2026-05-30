@@ -3,8 +3,10 @@ from __future__ import annotations
 import sys
 import asyncio
 import aiohttp
+import time
 import json
 import random
+import logging
 from typing import Any, TYPE_CHECKING
 from .flags import IntentFlags
 from .errors import GatewayError
@@ -13,10 +15,13 @@ from .event_dispatch import EventDispatcher
 if TYPE_CHECKING:
     from .bot import Bot
 
+_log = logging.getLogger(__name__)
+
 class GatewayClient:
     __slots__ = (
         "token",
         "intents",
+        "latency",
         "_dispatcher",
         "_ws",
         "_sequence",
@@ -25,6 +30,7 @@ class GatewayClient:
         "_last_ack",
         "_heartbeat_interval",
         "_heartbeat_task",
+        "_heartbeat_sent_at",
         "_listen_task",
         "_session",
         "_closed",
@@ -55,6 +61,7 @@ class GatewayClient:
     def __init__(self, bot: Bot, session: aiohttp.ClientSession, token: str, intents: IntentFlags):
         self.token = token
         self.intents = intents
+        self.latency: float = 0.0
 
         self._dispatcher = EventDispatcher(bot)
         self._session = session
@@ -65,6 +72,7 @@ class GatewayClient:
         self._last_ack: bool = True
         self._heartbeat_interval: float | None = None
         self._heartbeat_task: asyncio.Task | None = None
+        self._heartbeat_sent_at: float = 0.0
         self._listen_task: asyncio.Task | None = None
         self._closed = asyncio.Event()
         self._reconnect_lock = asyncio.Lock()
@@ -87,6 +95,10 @@ class GatewayClient:
 
     async def connect(self, resume_url: str | None = None):
         self._ws = await self._session.ws_connect(resume_url or self.URL)
+        if resume_url is None:
+            _log.info("Connected to discord gateway.")
+        else:
+            _log.info("Resumed Gateway Connection with resume_url: %s", resume_url)
         self._listen_task = asyncio.create_task(self._listen())
         self._listen_task.add_done_callback(self._on_task_done)
         
@@ -123,6 +135,11 @@ class GatewayClient:
             sequence = payload["s"]
             event = payload["t"]
 
+            _log.debug(
+                "Received Gateway Payload: Opcode = %s, Data Size = %s bytes, Sequence = %s, Event = %s",
+                op, len(msg.data), sequence, event
+            )
+
             if sequence is not None:
                 self._sequence = sequence
 
@@ -132,6 +149,7 @@ class GatewayClient:
 
         close_code = self._ws.close_code
         if close_code in self.RECONNECTABLE_CLOSE_CODES or close_code is None:
+            _log.error("Gateway Connection was disconnected, Attempting to reconnect. (Error Code = %s)", close_code)
             await self._handle_reconnect()
         else:
             self._closed.set()
@@ -142,15 +160,19 @@ class GatewayClient:
         while True:
             if not self._ws: return
             if not self._last_ack:
+                _log.info("Did not receive any HEARTBEAT ACK for the last heartbeat sent. Detected Zombied Connection and Closing Gateway connection.")
                 return await self._ws.close(code=4000)
 
             self._last_ack = False
+            self._heartbeat_sent_at = time.monotonic()
             await self._send_heartbeat()
 
             if not self._heartbeat_interval: return
             await asyncio.sleep(self._heartbeat_interval)
 
     async def _handle_heartbeat_ack(self, *_):
+        self.latency = time.monotonic() - self._heartbeat_sent_at
+        _log.debug("Received HEARTBEAT ACK (Opcode = 11) with latency %.2fms", self.latency * 1000)
         self._last_ack = True
 
     async def _handle_immediate_heartbeat(self, *_):
@@ -169,6 +191,7 @@ class GatewayClient:
                     "seq": self._sequence
                 }
             })
+            _log.debug("Sent RESUME (Opcode = 6) to Discord Gateway (Session ID = %s)", self._session_id)
         else:            
             await self._send({
                 "op": 2,
@@ -182,6 +205,7 @@ class GatewayClient:
                     },
                 }
             })
+            _log.debug("Sent IDENTIFY (Opcode = 2) to Discord Gateway.")
 
     async def _handle_reconnect(self, *_):
         if self._reconnect_lock.locked():
@@ -214,7 +238,8 @@ class GatewayClient:
             self._session_id = None
             self._sequence = None
             self._resume_ws_url = None
-            
+        
+        _log.info("Gateway Session was invalidated. Closing Gateway Connection now. (Resumable = %s)", data)
         if self._ws: await self._ws.close(code=4000)
         
     async def _handle_dispatch(self, data: dict[str, Any], event: str):
@@ -223,3 +248,5 @@ class GatewayClient:
             h = self._dispatcher._dispatch_handlers.get(event)
             if h is not None:
                 await h(data)
+            else:
+                _log.debug("No handler registered for event %s", event)

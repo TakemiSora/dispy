@@ -1,3 +1,5 @@
+from typing import Any
+
 __all__ = (
     "HTTPException",
     "GatewayError",
@@ -45,3 +47,10 @@ class InteractionResponded(Exception):
 
 class InteractionNotResponded(Exception):
     pass
+
+class RateLimitedRetry(Exception):
+    def __init__(self, data: dict[str, Any], retry_after: float, limit_scope: str | None, bucket_id: str | None):
+        self.data = data
+        self.retry_after = retry_after
+        self.limit_scope = limit_scope
+        self.bucket_id = bucket_id

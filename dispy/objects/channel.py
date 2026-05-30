@@ -295,6 +295,6 @@ def parse_channel_payload(
         ):
             return PartialGuildChannel(cast(PartialGuildChannelPayload, data), guild_id) if partial else GuildChannel(cast(GuildChannelPayload, data), guild_id)
         case _:
-            raise UnknownChannelType(f"Recieved unknown channel type '{data["type"]}'")
+            raise UnknownChannelType(f"Received unknown channel type '{data["type"]}'")
 
 Channel = ThreadChannel | PrivateChannel | GuildChannel

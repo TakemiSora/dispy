@@ -1,5 +1,6 @@
 from __future__ import annotations
 import asyncio
+import logging
 from typing import Any, TYPE_CHECKING
 
 from .enums.channel import ChannelType
@@ -20,6 +21,8 @@ from .utils import scls
 
 if TYPE_CHECKING:
     from .bot import Bot
+
+_log = logging.getLogger(__name__)
 
 class EventDispatcher:
     __slots__ = (
@@ -43,13 +46,23 @@ class EventDispatcher:
             "INTERACTION_CREATE": self._handle_interaction_create
         }
 
+    def _on_task_done(self, task: asyncio.Task, data: str):
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is not None:
+            _log.error("%s failed with exception", data, exc_info=exc)
+
     async def _dispatch(self, key: str, *args: Any):
         for f in self.bot._listeners.get(key, []):
-            asyncio.create_task(f(*args))
+            asyncio.create_task(f(*args)).add_done_callback(lambda t: self._on_task_done(t, f"Function {f.__name__} listening to '{key}'"))
+            _log.debug("Dispatched %s to function '%s'.", key, f.__name__)
             
     async def _dispatch_commands(self, name: str, interaction: Interaction, *args: Any):
         command = self.bot._command_callbacks.get(name)
-        if command: asyncio.create_task(command.callback(interaction, *args))
+        if command:
+            asyncio.create_task(command.callback(interaction, *args)).add_done_callback(lambda t: self._on_task_done(t, f"Handler Function {command.callback.__name__} for command '{name}'"))
+            _log.debug("Command %s (func=%s) dispatched.", name, command.callback.__name__)
             
     async def _handle_guild_create(self, data: GuildPayload | UnavailableGuildPayload):
         guild = self.bot.storage.update_guilds(g) if isinstance((g := parse_guild_payload(data)), Guild) else g

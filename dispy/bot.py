@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import inspect
 from collections.abc import Callable, Coroutine
 from typing import Any
@@ -15,6 +16,8 @@ from .managers import Channels, Guilds, Messages, Users
 __all__ = (
     "Bot",
 )
+
+_log = logging.getLogger(__name__)
 
 type CoroFunc = Callable[..., Coroutine[Any, Any, Any]]
 
@@ -81,7 +84,9 @@ class Bot:
                 }
             )
             self.http._session = self._session
+            _log.debug("Attempting to verify token (length=%s)", len(token))
             await self._verify_token()
+            _log.debug("Verified token successfully.")
             self.gateway = GatewayClient(self, self._session, token, self.intents)
             await self.gateway.connect()
             await self.gateway.wait_until_closed()

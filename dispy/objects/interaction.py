@@ -102,7 +102,7 @@ def parse_interaction_data(type: InteractionType, data: InteractionData) -> Invo
         ):
             return InvokedApplicationCommand(cast(InvokedApplicationCommandPayload, data))
         case _:
-            raise UnknownInteractionType(f"Recieved unknown interaction type '{type}'")
+            raise UnknownInteractionType(f"Received unknown interaction type '{type}'")
             
 class ResponseHandler:
     __slots__ = (

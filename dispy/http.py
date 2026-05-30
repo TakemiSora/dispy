@@ -1,8 +1,11 @@
 import aiohttp
 import asyncio
+import logging
 from typing import Any
 from urllib.parse import quote
-from .errors import NotFound, HTTPException, Forbidden, Unauthorized
+from .errors import NotFound, HTTPException, Forbidden, Unauthorized, RateLimitedRetry
+
+_log  = logging.getLogger(__name__)
 
 class Path:
     __slots__ = (
@@ -45,7 +48,7 @@ class RateLimitBucket:
     def update_bucket(self, resp: aiohttp.ClientResponse) -> None:
         headers = resp.headers
 
-        self.remaining = int(headers.get("X-RateLimit-Remaining", 0))
+        self.remaining = int(headers.get("X-RateLimit-Remaining", 1))
         self.reset_after = float(headers.get("X-RateLimit-Reset-After", 0.1))
 
 class HTTPClient:
@@ -67,47 +70,56 @@ class HTTPClient:
     async def request(self, path: Path, **kwargs: Any) -> Any:
         await self._global_ratelimit.wait()
         
+        _log.debug("Attempting to make request %s: %s", path.method, path.url)
+        
         bucket_id = self._buckets_keys.get(path.route_key)
         bucket = self._buckets.get(bucket_id) if bucket_id else None
 
-        async with (bucket.lock if bucket else asyncio.Lock()):
-            assert self._session is not None, "Cannot call session without intializing first."
-                
-            async with self._session.request(path.method, path.url, **kwargs) as resp:
-                new_bucket_id = resp.headers.get("X-RateLimit-Bucket")
+        try:
+            async with (bucket.lock if bucket else asyncio.Lock()):
+                assert self._session is not None, "Cannot call session without intializing first."
+                    
+                async with self._session.request(path.method, path.url, **kwargs) as resp:
+                    new_bucket_id = resp.headers.get("X-RateLimit-Bucket")
 
-                if new_bucket_id is not None:
-                    if new_bucket_id not in self._buckets:
-                        self._buckets[new_bucket_id] = RateLimitBucket(1, 0)
-                    self._buckets[new_bucket_id].update_bucket(resp)
-                    self._buckets_keys[path.route_key] = new_bucket_id
+                    if new_bucket_id is not None:
+                        if new_bucket_id not in self._buckets:
+                            self._buckets[new_bucket_id] = RateLimitBucket(1, 0)
+                        self._buckets[new_bucket_id].update_bucket(resp)
+                        self._buckets_keys[path.route_key] = new_bucket_id
 
-                if resp.status == 429:
-                    data = await resp.json()
-                    retry_after = float(data["retry_after"])
-                    limit_scope = resp.headers.get("X-RateLimit-Scope")
+                    if resp.status == 429:
+                        data = await resp.json()
+                        retry_after = float(data["retry_after"])
+                        limit_scope = resp.headers.get("X-RateLimit-Scope")
 
-                    if limit_scope == "global":
-                        self._global_ratelimit.clear()
-                        await asyncio.sleep(retry_after)
-                        self._global_ratelimit.set()
-                    else:
-                        await asyncio.sleep(retry_after)
+                        raise RateLimitedRetry(data, retry_after, limit_scope, new_bucket_id or bucket_id)
+                    
+                    if resp.status >= 400:
+                        data = await resp.json()
+                        message = data.get("message", "")
+                        match resp.status:
+                            case 401: raise Unauthorized(resp.status, message)
+                            case 403: raise Forbidden(resp.status, message)
+                            case 404: raise NotFound(resp.status, message)
+                            case _: raise HTTPException(resp.status, message)
 
-                    return await self.request(path, **kwargs)
-                
-                if resp.status >= 400:
-                    data = await resp.json()
-                    message = data.get("message", "")
-                    match resp.status:
-                        case 401: raise Unauthorized(resp.status, message)
-                        case 403: raise Forbidden(resp.status, message)
-                        case 404: raise NotFound(resp.status, message)
-                        case _: raise HTTPException(resp.status, message)
+                    if new_bucket_id:
+                        bucket = self._buckets.get(new_bucket_id)
+                        if bucket and bucket.remaining == 0:
+                            _log.info("Hit the ratelimit when accessing BucketID = %s on URL = %s. Continuing in %.2f", new_bucket_id, path.url, bucket.reset_after)
+                            await asyncio.sleep(bucket.reset_after)
+                    
+                    if "application/json" in resp.headers.get("Content-Type", ""): return await resp.json()
 
-                if new_bucket_id:
-                    bucket = self._buckets.get(new_bucket_id)
-                    if bucket and bucket.remaining == 0:
-                        await asyncio.sleep(bucket.reset_after)
-                
-                if "application/json" in resp.headers.get("Content-Type", ""): return await resp.json()
+        except RateLimitedRetry as e:
+            if e.limit_scope == "global":
+                self._global_ratelimit.clear()
+                _log.info("Hit the global ratelimit for the REST API. Continuing in %.2f seconds", e.retry_after)
+                await asyncio.sleep(e.retry_after)
+                self._global_ratelimit.set()
+            else:
+                _log.info("Hit the ratelimit when accessing BucketID = %s on URL = %s. Continuing in %.2f", e.bucket_id, path.url, e.retry_after)
+                await asyncio.sleep(e.retry_after)
+
+            return await self.request(path, **kwargs)

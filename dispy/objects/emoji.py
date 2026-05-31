@@ -5,7 +5,7 @@ from datetime import datetime
 from ..payloads.emoji import PartialEmojiPayload, EmojiPayload, ActivityEmojiPayload
 from ..payloads.channel import DefaultReactionPayload
 from ..payloads.message import ReactionCountDetailPayload, ReactionPayload
-from ..utils import scls
+from .._utils import scls
 
 __all__ = (
     "ActivityEmoji",

@@ -11,7 +11,7 @@ from ..payloads.presence import (
     PresencePayload,
     TimestampsPayload,
 )
-from ..utils import scls
+from .._utils import scls
 from .asset import activity_asset_parse
 from .emoji import ActivityEmoji
 from .snowflake import Snowflake

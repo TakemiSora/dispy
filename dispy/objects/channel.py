@@ -10,7 +10,7 @@ from ..enums.channel import (
 from ..errors import UnknownChannelType
 from ..flags import ChannelFlags
 from ..payloads.channel import *
-from ..utils import scls, siso, sint
+from .._utils import scls, siso, sint
 from .member import Member
 from .permissions import ChannelPermissionOverwrite, Permissions
 from .snowflake import Snowflake

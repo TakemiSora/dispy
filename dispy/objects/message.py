@@ -28,7 +28,7 @@ from ..payloads.message import (
     RoleSubscriptionDataPayload,
     SharedClientThemePayload,
 )
-from ..utils import scls, siso
+from .._utils import scls, siso
 from .channel import ChannelMention, ThreadChannel
 from .embed import Embed
 from .emoji import PartialEmoji, Reaction

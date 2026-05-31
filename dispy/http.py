@@ -3,11 +3,47 @@ import asyncio
 import logging
 from typing import Any
 from urllib.parse import quote
-from .errors import NotFound, HTTPException, Forbidden, Unauthorized, RateLimitedRetry
+from .errors import NotFound, HTTPException, Forbidden, Unauthorized, _RateLimitedRetry
 
 _log  = logging.getLogger(__name__)
 
+__all__ = (
+    "Path",
+    "HTTPClient"
+)
+
 class Path:
+    """
+    The Path/URL metadata for a HTTP Request. Parameters should be initalized with keyword arguments rather than f-strings.
+    
+    Parameters
+    ----------
+    method : :class:`str`
+        The HTTP Method for the request such as ``GET``, ``POST``.
+    url : :class:`str`
+        The URL endpoint to make the request to. Refer to examples below for formatting.
+    **parameters : :class:`Any <typing.Any>`
+        The Parameters for the URL. Refer at examples below for formatting.
+        
+    Examples
+    --------
+    
+    .. code-block:: python
+    
+        dispy.Path(
+            "GET",
+            "channels/{channel_id}/messages/{message_id}",
+            channel_id=channel_id,
+            message_id=message_id
+        )))
+    """
+    
+    method: str
+    "The HTTP Method for the request such as ``GET``, ``POST``."
+    
+    url: str
+    "The formatted URL endpoint to make the request to."
+    
     __slots__ = (
         "method",
         "url",
@@ -17,7 +53,7 @@ class Path:
         "webhook_token"
     )
     
-    def __init__(self, method: str, url: str, **parameters):
+    def __init__(self, method: str, url: str, **parameters: Any):
         self.method = method
         if parameters:
             self.url = url.format_map({key: quote(val, safe = "") if isinstance(val, str) else val for key, val in parameters.items()})
@@ -52,6 +88,9 @@ class RateLimitBucket:
         self.reset_after = float(headers.get("X-RateLimit-Reset-After", 0.1))
 
 class HTTPClient:
+    """
+    The Client that is used to interact with the Discord REST API. This should **not** be constructed by the user.
+    """
     __slots__ = (
         "_session",
         "_global_ratelimit",
@@ -68,6 +107,32 @@ class HTTPClient:
         self._buckets: dict[str, RateLimitBucket] = {}
         
     async def request(self, path: Path, **kwargs: Any) -> Any:
+        """
+        Used to make a HTTP request to the Discord API.
+
+        Parameters
+        ----------
+        path : :class:`Path <dispy.http.Path>`
+            The Path metadata for the request.
+        **kwargs : :class:`Any <typing.Any>`
+            The keyword arguments for the request. These are passed directly to :meth:`aiohttp.ClientSession.request` method.
+
+        Returns
+        -------
+        :class:`Any <typing.Any>`
+            The data returned from the request. If the data is JSON, it is parsed into a :class:`dict`.
+        
+        Raises
+        ------
+        :class:`Unauthorized`
+            You are not authorized. Your token may be invalid.
+        :class:`Forbidden`
+            You are forbidden from accessing this endpoint.
+        :class:`NotFound`
+            The resource you tried to request wasn't found.
+        :class:`HTTPException`
+            An HTTP error occured.
+        """
         await self._global_ratelimit.wait()
         
         _log.debug("Attempting to make request %s: %s", path.method, path.url)
@@ -93,7 +158,7 @@ class HTTPClient:
                         retry_after = float(data["retry_after"])
                         limit_scope = resp.headers.get("X-RateLimit-Scope")
 
-                        raise RateLimitedRetry(data, retry_after, limit_scope, new_bucket_id or bucket_id)
+                        raise _RateLimitedRetry(data, retry_after, limit_scope, new_bucket_id or bucket_id)
                     
                     if resp.status >= 400:
                         data = await resp.json()
@@ -112,7 +177,7 @@ class HTTPClient:
                     
                     if "application/json" in resp.headers.get("Content-Type", ""): return await resp.json()
 
-        except RateLimitedRetry as e:
+        except _RateLimitedRetry as e:
             if e.limit_scope == "global":
                 self._global_ratelimit.clear()
                 _log.info("Hit the global ratelimit for the REST API. Continuing in %.2f seconds", e.retry_after)

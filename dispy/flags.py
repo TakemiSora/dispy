@@ -30,6 +30,11 @@ class RoleFlags(IntFlag):
     IN_PROMPT = 1 << 0
     
 class IntentFlags(IntFlag):
+    """
+    A bitfield of IntentFlags to be provided to Discord Gateway. These determine which events you will be sent over the gateway. Read more about it on `Gateway Intents <https://docs.discord.com/developers/events/gateway#gateway-intents>`_.
+    
+    Note that ``GUILD_PRESENCES``, ``MESSAGE_CONTENT`` and ``GUILD_MEMBERS`` are **privileged intents** and need to be enabled in the Developer Portal to use.
+    """
     GUILDS = 1 << 0
     GUILD_MEMBERS = 1 << 1
     GUILD_MODERATION = 1 << 2
@@ -54,6 +59,9 @@ class IntentFlags(IntFlag):
 
     @classmethod
     def all(cls) -> Self:
+        """
+        Returns a :class:`IntentFlags <dispy.flags.IntentFlags>` instance with all intents enabled.
+        """
         val = 0
         for f in cls:
             val |= f
@@ -62,8 +70,11 @@ class IntentFlags(IntFlag):
 
     @classmethod
     def standard(cls) -> Self:
-        priviledged = cls.GUILD_PRESENCES | cls.MESSAGE_CONTENT | cls.GUILD_MEMBERS
-        return cls.all() & ~priviledged
+        """
+        Returns a :class:`IntentFlags <dispy.flags.IntentFlags>` instance with only non-privileged intents enabled.
+        """
+        privileged = cls.GUILD_PRESENCES | cls.MESSAGE_CONTENT | cls.GUILD_MEMBERS
+        return cls.all() & ~privileged
 
 class SystemChannelFlags(IntFlag):
     SUPPRESS_JOIN_NOTIFICATIONS = 1 << 0

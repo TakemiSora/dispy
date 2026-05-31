@@ -4,7 +4,7 @@ from .permissions import Permissions
 from .snowflake import Snowflake
 from datetime import datetime
 from ..payloads.role import RoleColorsPayload, RoleTagsPayload, RolePayload
-from ..utils import scls
+from .._utils import scls
 
 __all__ = (
     "Role",

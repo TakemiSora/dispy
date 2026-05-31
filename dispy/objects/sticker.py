@@ -1,4 +1,4 @@
-from ..utils import sint, scls
+from .._utils import sint, scls
 from ..enums.sticker import StickerType, StickerFormatType
 from .asset import Asset
 from .user import User

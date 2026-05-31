@@ -25,7 +25,7 @@ from ..payloads.interaction import (
     ResolvedDataPayload,
 )
 from ..flags import MessageFlags
-from ..utils import scls, _MISSING
+from .._utils import scls, _MISSING
 from .channel import parse_channel_payload
 from .embed import Embed
 from .guild import Guild
@@ -185,6 +185,9 @@ class ResponseHandler:
         self, *,
         ephemeral: bool = False
     ):
+        if self.acknowledged:
+            raise InteractionResponded()
+        
         await self._post(
             InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
             InteractionCallbackDataPayload(

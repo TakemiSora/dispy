@@ -17,7 +17,7 @@ from .payloads.channel import (
 )
 from .payloads.guild import GuildPayload, UnavailableGuildPayload
 from .payloads.interaction import InteractionPayload
-from .utils import scls
+from ._utils import scls
 
 if TYPE_CHECKING:
     from .bot import Bot
@@ -65,11 +65,11 @@ class EventDispatcher:
             _log.debug("Command %s (func=%s) dispatched.", name, command.callback.__name__)
             
     async def _handle_guild_create(self, data: GuildPayload | UnavailableGuildPayload):
-        guild = self.bot.storage.update_guilds(g) if isinstance((g := parse_guild_payload(data)), Guild) else g
+        guild = self.bot._storage.update_guilds(g) if isinstance((g := parse_guild_payload(data)), Guild) else g
         await self._dispatch("on_guild_create", guild)
         
     async def _handle_guild_update(self, data: GuildPayload):
-        guild = self.bot.storage.update_guilds(Guild(data))
+        guild = self.bot._storage.update_guilds(Guild(data))
         await self._dispatch("on_guild_update", guild)
     
     async def _handle_guild_delete(self, data: UnavailableGuildPayload):
@@ -78,25 +78,25 @@ class EventDispatcher:
         await self._dispatch("on_guild_delete", guild, kicked)
 
     async def _handle_channel_create(self, data: GuildChannelPayload | PrivateChannelPayload):
-        channel = self.bot.storage.update_channels(parse_channel_payload(data))
+        channel = self.bot._storage.update_channels(parse_channel_payload(data))
         await self._dispatch("on_channel_create", channel)
 
     async def _handle_channel_update(self, data: GuildChannelPayload | PrivateChannelPayload):
-        channel = self.bot.storage.update_channels(parse_channel_payload(data))
+        channel = self.bot._storage.update_channels(parse_channel_payload(data))
         await self._dispatch("on_channel_update", channel)
 
     async def _handle_channel_delete(self, data: GuildChannelPayload | PrivateChannelPayload):
-        channel = self.bot.storage.remove_channel(int(data["id"]))
+        channel = self.bot._storage.remove_channel(int(data["id"]))
         await self._dispatch("on_channel_delete", channel or parse_channel_payload(data))
 
     async def _handle_thread_create(self, data: ThreadCreatePayload):
         newly_created = data.get("newly_created", False)
         thread_member = scls(ThreadMember, data.get("member"))
-        channel = self.bot.storage.update_channels(ThreadChannel(data))
+        channel = self.bot._storage.update_channels(ThreadChannel(data))
         await self._dispatch("on_thread_create", channel, newly_created, thread_member)
 
     async def _handle_thread_update(self, data: ThreadPayload):
-        channel = self.bot.storage.update_channels(ThreadChannel(data))
+        channel = self.bot._storage.update_channels(ThreadChannel(data))
         await self._dispatch("on_thread_update", channel)
 
     async def _handle_thread_delete(self, data: ThreadDeletePayload):
@@ -104,7 +104,7 @@ class EventDispatcher:
         guild_id = int(data["guild_id"])
         parent_id = int(data["parent_id"])
         type = ChannelType(data["type"])
-        self.bot.storage.remove_channel(id)
+        self.bot._storage.remove_channel(id)
         await self._dispatch("on_thread_delete", id, guild_id, parent_id, type)
         
     async def _handle_interaction_create(self, data: InteractionPayload):

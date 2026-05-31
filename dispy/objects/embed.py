@@ -18,7 +18,7 @@ from ..flags import (
     EmbedMediaFlags,
     EmbedFlags
 )
-from ..utils import siso, scls
+from .._utils import siso, scls
 
 __all__ = (
     "EmbedFooter",

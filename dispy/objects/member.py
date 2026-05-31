@@ -3,7 +3,7 @@ from typing import overload
 
 from ..flags import GuildMemberFlags
 from ..payloads.member import MemberPayload, PartialMemberPayload
-from ..utils import scls, sint, siso
+from .._utils import scls, sint, siso
 from .asset import Asset
 from .avatar_decoration import AvatarDecoration
 from .collectibles import Nameplate

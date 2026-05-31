@@ -1,6 +1,6 @@
 from typing import Self
 from datetime import datetime, UTC
-from ..utils import sint
+from .._utils import sint
 
 class Snowflake(int):
     _DISCORD_EPOCH = 1420070400000

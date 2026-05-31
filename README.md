@@ -18,3 +18,12 @@ async def ping(interaction: dispy.Interaction):
 
 bot.run("TOKEN-HERE")
 ```
+
+### Documentation
+
+There is no current hosted documentation (yet), but a local version of the documentation can be viewed by doing the following commands:
+
+- Clone the repository.
+- Open Terminal in `docs/` folder.
+- For linux/mac, do `make html`. For windows, do `make.bat` and select HTML.
+- Open `docs/build/html/index.js`.

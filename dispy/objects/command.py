@@ -7,7 +7,7 @@ from ..payloads.command import (
     CommandOptionPayload,
     LocalizationPayload,
 )
-from ..utils import scls, sint
+from .._utils import scls, sint
 from .permissions import Permissions
 from .snowflake import Snowflake
 

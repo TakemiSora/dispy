@@ -31,7 +31,7 @@ from .snowflake import Snowflake
 from .member import Member
 from .channel import ThreadChannel, parse_channel_payload
 from datetime import datetime
-from ..utils import siso, scls
+from .._utils import siso, scls
 
 __all__ = (
     "UnavailableGuild",

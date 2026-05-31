@@ -10,7 +10,7 @@ import logging
 from typing import Any, TYPE_CHECKING
 from .flags import IntentFlags
 from .errors import GatewayError
-from .event_dispatch import EventDispatcher
+from ._event_dispatch import EventDispatcher
 
 if TYPE_CHECKING:
     from .bot import Bot
@@ -18,6 +18,30 @@ if TYPE_CHECKING:
 _log = logging.getLogger(__name__)
 
 class GatewayClient:
+    """
+    The Client that is used to connect and recieve events over gateway. This should **not** be constructed by the user.
+
+    Parameters
+    ----------
+    bot : :class:`Bot <dispy.bot.Bot>`
+        The bot instance that is being connected to the gateway.
+    session : :class:`aiohttp.ClientSession`
+        The session that will be used to connect to the gateway.
+    token : :class:`str`
+        The bot token used to authenticate with discord. Do not prefix this, the library will handle prefixing.        
+    intents : :class:`IntentFlags <dispy.flags.IntentFlags>`
+        The IntentFlags passed to the gateway.
+    """
+    
+    token: str
+    "The bot token used to authenticate with discord. Do not prefix this, the library will handle prefixing."
+    
+    intents: IntentFlags
+    "The IntentFlags passed to the gateway."
+    
+    latency: float
+    "The latency (in microseconds) for the gateway connection."
+    
     __slots__ = (
         "token",
         "intents",
@@ -38,10 +62,10 @@ class GatewayClient:
         "_handlers",
     )
     
-    URL = "wss://gateway.discord.gg/?v=10&encoding=json"
-    RECONNECTABLE_CLOSE_CODES = [4000, 4001, 4002, 4003, 4005, 4007, 4008, 4009]
+    _URL = "wss://gateway.discord.gg/?v=10&encoding=json"
+    _RECONNECTABLE_CLOSE_CODES = [4000, 4001, 4002, 4003, 4005, 4007, 4008, 4009]
 
-    GATEWAY_CODE_MESSAGES = {
+    _GATEWAY_CODE_MESSAGES = {
         4000: "Unknown error: We're not sure what went wrong. Try reconnecting?",
         4001: "Unkown opcode: You sent an invalid Gateway opcode or an invalid payload for an opcode. Don't do that!",
         4002: "Decode error: You sent an invalid payload to Discord. Don't do that!",
@@ -61,7 +85,7 @@ class GatewayClient:
     def __init__(self, bot: Bot, session: aiohttp.ClientSession, token: str, intents: IntentFlags):
         self.token = token
         self.intents = intents
-        self.latency: float = 0.0
+        self.latency = 0.0
 
         self._dispatcher = EventDispatcher(bot)
         self._session = session
@@ -94,7 +118,15 @@ class GatewayClient:
         await self._send({"op": 1, "d": self._sequence})
 
     async def connect(self, resume_url: str | None = None):
-        self._ws = await self._session.ws_connect(resume_url or self.URL)
+        """
+        Used to connect and start listening to the gateway events.
+
+        Parameters
+        ----------
+        resume_url : :class:`str` | :class:`None`, optional
+            The URL to resume the gateway connection with, if any. Defaults to ``None``
+        """
+        self._ws = await self._session.ws_connect(resume_url or self._URL)
         if resume_url is None:
             _log.info("Connected to discord gateway.")
         else:
@@ -108,9 +140,17 @@ class GatewayClient:
             self._closed.set()
 
     async def wait_until_closed(self):
+        """
+        Waits until the gateway connection is closed.
+
+        This coroutine blocks until the gateway disconnects. Useful for keeping the bot alive in a main coroutine.
+        """
         await self._closed.wait()
 
     async def close(self):
+        """
+        Closes and cleans up the gateway connection.
+        """
         self._closed.set()
 
         if self._heartbeat_task:
@@ -148,12 +188,12 @@ class GatewayClient:
                 await handler(data, event)
 
         close_code = self._ws.close_code
-        if close_code in self.RECONNECTABLE_CLOSE_CODES or close_code is None:
+        if close_code in self._RECONNECTABLE_CLOSE_CODES or close_code is None:
             _log.error("Gateway Connection was disconnected, Attempting to reconnect. (Error Code = %s)", close_code)
             await self._handle_reconnect()
         else:
             self._closed.set()
-            raise GatewayError(close_code, self.GATEWAY_CODE_MESSAGES.get(close_code, ""))
+            raise GatewayError(close_code, self._GATEWAY_CODE_MESSAGES.get(close_code, ""))
 
     async def _heartbeat_loop(self):
         if self._heartbeat_interval: await asyncio.sleep(self._heartbeat_interval * random.random())

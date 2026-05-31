@@ -3,7 +3,7 @@ from datetime import datetime
 from ..enums.user import PremiumType
 from ..flags import UserFlags
 from ..payloads.user import PartialUserPayload, UserPayload
-from ..utils import scls
+from .._utils import scls
 from .asset import Asset
 from .avatar_decoration import AvatarDecoration
 from .collectibles import Nameplate

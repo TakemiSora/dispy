@@ -1,20 +1,19 @@
 from __future__ import annotations
-
-from typing import Any, Self
 from collections.abc import Callable, Coroutine
+from typing import Any, Literal, Self, overload
 
+from .._utils import _MISSING, assign_val, assign_val_dict, mtd, scls, sint
 from ..enums.channel import ChannelType
 from ..enums.command import ApplicationCommandType, CommandHandler, CommandOptionType
 from ..enums.interaction import ApplicationIntegrationType, InteractionContextType
 from ..payloads.command import (
-    BaseApplicationCommandPayload,
-    PartialApplicationCommandPayload,
     ApplicationCommandPayload,
+    BaseApplicationCommandPayload,
     CommandChoicePayload,
     CommandOptionPayload,
     LocalizationPayload,
+    PartialApplicationCommandPayload,
 )
-from .._utils import scls, mtd, sint, _MISSING, assign_val, assign_val_dict
 from .permissions import Permissions
 from .snowflake import Snowflake
 
@@ -92,14 +91,13 @@ class ApplicationCommandChoice:
         name_localizations: Localization = _MISSING,
         value: str | int | float
     ) -> Self:
-        choice = cls(CommandChoicePayload(
-            name=name,
-            value=value
-        ))
-
-        assign_val(choice, {"name_localizations": name_localizations})
-
-        return choice
+        return assign_val(
+            cls(CommandChoicePayload(
+                name=name,
+                value=value
+            )),
+            name_localizations=name_localizations
+        )
     
     def _to_dict(self) -> CommandChoicePayload:
         return assign_val_dict(
@@ -107,9 +105,7 @@ class ApplicationCommandChoice:
                 name=self.name,
                 value=self.value
             ),
-            {
-                "name_localizations": mtd(self.name_localizations)
-            }
+            name_localizations=mtd(self.name_localizations)
         )
 
 class ApplicationCommandOption:
@@ -146,6 +142,97 @@ class ApplicationCommandOption:
         self.max_length = data.get("max_length")
         self.autocomplete= data.get("autocomplete", False)
 
+    @overload
+    @classmethod
+    def new(
+        cls, *,
+        type: Literal[CommandOptionType.SUB_COMMAND, CommandOptionType.SUB_COMMAND_GROUP],
+        name: str,
+        name_localizations: Localization = _MISSING,
+        description: str,
+        description_localizations: Localization = _MISSING,
+        options: list[ApplicationCommandOption] = _MISSING
+    ) -> Self: ...
+
+    @overload
+    @classmethod
+    def new(
+        cls, *,
+        type: Literal[CommandOptionType.STRING],
+        name: str,
+        name_localizations: Localization = _MISSING,
+        description: str,
+        description_localizations: Localization = _MISSING,
+        required: bool = False,
+        choices: list[ApplicationCommandChoice] = _MISSING,
+        min_length: int = _MISSING,
+        max_length: int = _MISSING,
+        autocomplete: bool = False
+    ) -> Self: ...
+
+    @overload
+    @classmethod
+    def new(
+        cls, *,
+        type: Literal[CommandOptionType.INTEGER],
+        name: str,
+        name_localizations: Localization = _MISSING,
+        description: str,
+        description_localizations: Localization = _MISSING,
+        required: bool = False,
+        choices: list[ApplicationCommandChoice] = _MISSING,
+        min_value: int = _MISSING,
+        max_value: int = _MISSING,
+        autocomplete: bool = False
+    ) -> Self: ...
+
+    @overload
+    @classmethod
+    def new(
+        cls, *,
+        type: Literal[
+            CommandOptionType.BOOLEAN,
+            CommandOptionType.USER,
+            CommandOptionType.ROLE,
+            CommandOptionType.MENTIONABLE,
+            CommandOptionType.ATTACHMENT
+        ],
+        name: str,
+        name_localizations: Localization = _MISSING,
+        description: str,
+        description_localizations: Localization = _MISSING,
+        required: bool = False
+    ) -> Self: ...
+
+    @overload
+    @classmethod
+    def new(
+        cls, *,
+        type: Literal[CommandOptionType.CHANNEL],
+        name: str,
+        name_localizations: Localization = _MISSING,
+        description: str,
+        description_localizations: Localization = _MISSING,
+        required: bool = False,
+        channel_types: list[ChannelType] = _MISSING,
+    ) -> Self: ...
+
+    @overload
+    @classmethod
+    def new(
+        cls, *,
+        type: Literal[CommandOptionType.NUMBER],
+        name: str,
+        name_localizations: Localization = _MISSING,
+        description: str,
+        description_localizations: Localization = _MISSING,
+        required: bool = False,
+        choices: list[ApplicationCommandChoice] = _MISSING,
+        min_value: float = _MISSING,
+        max_value: float = _MISSING,
+        autocomplete: bool = False
+    ) -> Self: ...
+
     @classmethod
     def new(
         cls, *,
@@ -172,17 +259,15 @@ class ApplicationCommandOption:
                 required=required,
                 autocomplete=autocomplete
             )),
-            {
-                "name_localizations": name_localizations,
-                "description_localizations": description_localizations,
-                "choices": choices,
-                "options": options,
-                "channel_types": channel_types,
-                "min_value": min_value,
-                "max_value": max_value,
-                "min_length": min_length,
-                "max_length": max_length
-            }
+            name_localizations=name_localizations,
+            description_localizations=description_localizations,
+            choices=choices,
+            options=options,
+            channel_types=channel_types,
+            min_value=min_value,
+            max_value=max_value,
+            min_length=min_length,
+            max_length=max_length
         )
 
     def _to_dict(self) -> CommandOptionPayload:
@@ -194,17 +279,15 @@ class ApplicationCommandOption:
                 required=self.required,
                 autocomplete=self.autocomplete
             ),
-            {
-                "name_localizations": mtd(self.name_localizations),
-                "description_localizations": mtd(self.description_localizations),
-                "choices": [c._to_dict() for c in self.choices] if self.choices else None,
-                "options": [o._to_dict() for o in self.options] if self.options else None,
-                "channel_types": [ct.value for ct in self.channel_types] if self.channel_types else None,
-                "min_value": self.min_value,
-                "max_value": self.max_value,
-                "min_length": self.min_length,
-                "max_length": self.max_length
-            }
+            name_localizations=mtd(self.name_localizations),
+            description_localizations=mtd(self.description_localizations),
+            choices=[c._to_dict() for c in self.choices] if self.choices else None,
+            options=[o._to_dict() for o in self.options] if self.options else None,
+            channel_types=[ct.value for ct in self.channel_types] if self.channel_types else None,
+            min_value=self.min_value,
+            max_value=self.max_value,
+            min_length=self.min_length,
+            max_length=self.max_length,
         )
 
 type CoroFunc = Callable[..., Coroutine[Any, Any, Any]]
@@ -264,16 +347,14 @@ class PartialApplicationCommand(BaseApplicationCommand):
                 name=name,
                 type=type.value
             ), callback),
-            {
-                "name_localizations": name_localizations,
-                "description": description,
-                "description_localizations": description_localizations,
-                "options": options,
-                "default_member_permissions": default_member_permissions,
-                "integration_types": integration_types,
-                "contexts": contexts,
-                "nsfw": nsfw
-            }
+            name_localizations=name_localizations,
+            description=description,
+            description_localizations=description_localizations,
+            options=options,
+            default_member_permissions=default_member_permissions,
+            integration_types=integration_types,
+            contexts=contexts,
+            nsfw=nsfw,
         )
 
     def _to_dict(self) -> PartialApplicationCommandPayload:
@@ -283,15 +364,13 @@ class PartialApplicationCommand(BaseApplicationCommand):
                 type=self.type.value,
                 nsfw=self.nsfw
             ),
-            {
-                "name_localizations": mtd(self.name_localizations),
-                "description": self.description,
-                "description_localizations": mtd(self.description_localizations),
-                "options": [o._to_dict() for o in self.options] if self.options else None,
-                "default_member_permissions": self.default_member_permissions.value if self.default_member_permissions else None,
-                "integration_types": [i.value for i in self.integration_types] if self.integration_types else None,
-                "contexts": [c.value for c in self.contexts] if self.contexts else None
-            }
+            name_localizations=mtd(self.name_localizations),
+            description=self.description,
+            description_localizations=mtd(self.description_localizations),
+            options=[o._to_dict() for o in self.options] if self.options else None,
+            default_member_permissions=self.default_member_permissions.value if self.default_member_permissions else None,
+            integration_types=[i.value for i in self.integration_types] if self.integration_types else None,
+            contexts=[c.value for c in self.contexts] if self.contexts else None,
         )
 
 class ApplicationCommand(BaseApplicationCommand):

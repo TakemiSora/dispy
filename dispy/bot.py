@@ -1,5 +1,5 @@
 import asyncio
-from bisect import insort_left
+
 import logging
 import inspect
 from collections.abc import Callable, Coroutine

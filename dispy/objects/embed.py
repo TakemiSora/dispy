@@ -18,7 +18,7 @@ from ..flags import (
     EmbedMediaFlags,
     EmbedFlags
 )
-from .._utils import siso, scls
+from .._utils import mtd, siso, scls, assign_val, assign_val_dict, _MISSING
 
 __all__ = (
     "EmbedFooter",
@@ -41,19 +41,25 @@ class EmbedFooter:
         self.proxy_icon_url = data.get("proxy_icon_url")
 
     def _to_dict(self) -> EmbedFooterPayload:
-        footer = EmbedFooterPayload(text=self.text)
-        if self.icon_url is not None: footer["icon_url"] = self.icon_url
-        return footer
+        return assign_val_dict(
+            EmbedFooterPayload(text=self.text),
+            icon_url=self.icon_url
+        )
 
     @classmethod
     def new(
         cls, *,
         text: str,
-        icon_url: str | None = None
+        icon_url: str = _MISSING
     ) -> Self:
         footer = cls(EmbedFooterPayload(text=text))
         footer.icon_url = icon_url
-        return footer
+        return assign_val(
+            cls(EmbedFooterPayload(
+                text=text
+            )),
+            icon_url=icon_url
+        )
 
 class EmbedMedia:
     __slots__ = (
@@ -90,7 +96,7 @@ class EmbedImage(EmbedMedia):
         return EmbedImagePayload(url=self.url)
 
     @classmethod
-    def new(cls, *, url: str) -> Self:
+    def new(cls, url: str) -> Self:
         return cls(EmbedImagePayload(url=url))
 
 class EmbedVideo(EmbedMedia):
@@ -125,18 +131,30 @@ class EmbedAuthor:
         self.url = data.get("url")
         self.icon_url = data.get("icon_url")
         self.proxy_icon_url = data.get("proxy_icon_url")
+        
+    def _to_dict(self) -> EmbedAuthorPayload:
+        return assign_val_dict(
+            EmbedAuthorPayload(
+                name=self.name
+            ),
+            url=self.url,
+            icon_url=self.icon_url
+        )
 
     @classmethod
     def new(
         cls, *,
         name: str,
-        url: str | None = None,
-        icon_url: str | None,
+        url: str = _MISSING,
+        icon_url: str = _MISSING,
     ) -> Self:
-        author = cls(EmbedAuthorPayload(name=name))
-        author.url = url
-        author.icon_url= icon_url
-        return author
+        return assign_val(
+            cls(EmbedAuthorPayload(
+                name=name
+            )),
+            url=url,
+            icon_url=icon_url
+        )
 
 class EmbedField:
     __slots__ = (
@@ -190,7 +208,7 @@ class Embed:
     
     def __init__(self, data: EmbedPayload):
         self.title = data.get("title")
-        self.type = scls(EmbedType, data.get("type"))
+        self.type = EmbedType(data.get("type", "rich"))
         self.description = data.get("description")
         self.url = data.get("url")
         self.timestamp = siso(data.get("timestamp"))
@@ -205,39 +223,42 @@ class Embed:
         self.flags = EmbedFlags(data.get("flags", 0))
 
     def _to_dict(self) -> EmbedPayload:
-        embed = EmbedPayload()
-        if self.title is not None: embed["title"] = self.title
-        if self.type is not None: embed["type"] = self.type.value
-        if self.description is not None: embed["description"] = self.description
-        if self.timestamp is not None: embed["timestamp"] = self.timestamp.isoformat()
-        if self.color is not None: embed["color"] = self.color
-        if self.footer is not None: embed["footer"] = self.footer._to_dict()
-        if self.image is not None: embed["image"] = self.image._to_dict()
-        if self.thumbnail is not None: embed["thumbnail"] = self.thumbnail._to_dict()
-        if self.fields is not None: embed["fields"] = [f._to_dict() for f in self.fields]
-        return embed
+        return assign_val_dict(
+            EmbedPayload(),
+            title=self.title,
+            type=self.type.value,
+            description=self.description,
+            timestamp=self.timestamp.isoformat() if self.timestamp is not None else None,
+            color=self.color,
+            footer=mtd(self.footer),
+            image=mtd(self.image),
+            thumbnail=mtd(self.thumbnail),
+            author=mtd(self.author),
+            fields=[f._to_dict() for f in self.fields] if self.fields else None
+        )
 
     @classmethod
     def new(
         cls, *,
-        title: str | None = None,
-        description: str | None = None,
-        timestamp: datetime | None = None,
-        color: int | None = None,
-        footer: EmbedFooter | None = None,
-        image: EmbedImage | None = None,
-        thumbnail: EmbedImage | None = None,
-        author: EmbedAuthor | None = None,
-        fields: list[EmbedField] | None = None
+        title: str = _MISSING,
+        description: str = _MISSING,
+        timestamp: datetime = _MISSING,
+        color: int = _MISSING,
+        footer: EmbedFooter = _MISSING,
+        image: EmbedImage = _MISSING,
+        thumbnail: EmbedImage = _MISSING,
+        author: EmbedAuthor = _MISSING,
+        fields: list[EmbedField] = _MISSING
     ) -> Self:
-        embed = cls(EmbedPayload(type=EmbedType.rich))
-        embed.title = title
-        embed.description = description
-        embed.timestamp = timestamp
-        embed.color = color
-        embed.footer = footer
-        embed.image = image
-        embed.thumbnail = thumbnail
-        embed.author = author
-        embed.fields = fields
-        return embed
+        return assign_val(
+            cls(EmbedPayload(type=EmbedType.rich)),
+            title=title,
+            description=description,
+            timestamp=timestamp,
+            color=color,
+            footer=footer,
+            image=image,
+            thumbnail=thumbnail,
+            author=author,
+            fields=fields
+        )

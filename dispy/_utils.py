@@ -13,16 +13,16 @@ _MISSING: Any = Missing()
 class SupportsToDict(Protocol):
     def _to_dict(self) -> Any: ...
 
-def assign_val[T](obj: T, keys: dict[str, Any], check_against: Any = _MISSING) -> T:
-    for key, val in keys.items():
+def assign_val[T](obj: T, check_against: Any = _MISSING, /, **kwargs: Any) -> T:
+    for key, val in kwargs.items():
         if val is not check_against: setattr(obj, key, val)
     return obj
 
 def mtd[T: SupportsToDict](obj: T | None) -> T | None:
     return obj._to_dict() if obj is not None else None
 
-def assign_val_dict[T](d: T, keys: dict[str, Any], check_against: Any = None) -> T:
-    for key, val in keys.items():
+def assign_val_dict[T](d: T, check_against: Any = None, /, **kwargs: Any) -> T:
+    for key, val in kwargs.items():
         if val is not check_against: d[key] = val # type: ignore
     return d
 

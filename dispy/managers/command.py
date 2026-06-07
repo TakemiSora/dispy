@@ -21,11 +21,13 @@ class CommandManager(BaseManager):
 
     __slots__ = (
         "_application_id",
+        "_commands_data"
     )
     
-    def __init__(self, client: HTTPClient, storage: CacheStorage, application_id: int):
+    def __init__(self, client: HTTPClient, storage: CacheStorage, application_id: int, commands_data: dict[str, tuple[int, PartialApplicationCommand]]):
         super().__init__(client, storage)
         self._application_id = application_id
+        self._commands_data = commands_data
 
     async def _command_request(
         self, *,
@@ -156,6 +158,38 @@ class CommandManager(BaseManager):
                 command_id=command_id
             )), guild_id=guild_id or 0
         )
+
+    async def sync_all(self) -> list[ApplicationCommand]:
+        """
+        Syncs registered commands via :meth:`@Bot.command() <dispy.objects.bot.Bot.command>` to the Application. This will **override** all commands currently synced.
+
+        Raises
+        ------
+        :class:`Unauthorized`
+            You are not authorized. Your token may be invalid.
+
+        :class:`HTTPException`
+            A HTTP error occured.
+        """
+        global_cmds: list[PartialApplicationCommand] = []
+        guild_cmds: dict[int, list[PartialApplicationCommand]] = {}
+            
+        for data in self._commands_data.values():
+            id = data[0]
+
+            if id == 0:
+                global_cmds.append(data[1])
+            else:
+                if id not in guild_cmds: guild_cmds[id] = []
+                guild_cmds[id].append(data[1])
+
+        to_return: list[ApplicationCommand] = []
+        if global_cmds: to_return += await self.sync_bulk(global_cmds)
+        
+        for guild_id, cmds in guild_cmds.items():
+            to_return += await self.sync_bulk(cmds, guild_id=guild_id)
+        
+        return to_return
 
     async def sync_bulk(
         self, commands: list[PartialApplicationCommand],

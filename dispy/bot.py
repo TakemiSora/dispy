@@ -3,7 +3,7 @@ import asyncio
 import logging
 import inspect
 from collections.abc import Callable, Coroutine
-from typing import Any
+from typing import Any, overload
 
 import aiohttp
 
@@ -15,8 +15,12 @@ from .gateway import GatewayClient
 from .http import HTTPClient
 from ._utils import _MISSING
 
-from .objects.command import PartialApplicationCommand
+from .enums.command import ApplicationCommandType
+from .enums.interaction import InteractionContextType, ApplicationIntegrationType
+
+from .objects.command import PartialApplicationCommand, Localization, ApplicationCommandOption
 from .objects.user import User
+from .objects.permissions import Permissions
 
 from .managers.channel import ChannelManager
 from .managers.guild import GuildManager
@@ -97,7 +101,7 @@ class Bot:
         self.http = HTTPClient()
         self._listeners: dict[str, list[CoroFunc]] = {}
         self._setup_hook: CoroFunc | None = None
-        self._commands_data: dict[str, PartialApplicationCommand] = {}
+        self._commands_data: dict[str, tuple[int, PartialApplicationCommand]] = {}
 
         self._storage = CacheStorage(cache_settings)
         self.users = UserManager(self.http, self._storage)
@@ -155,7 +159,7 @@ class Bot:
             _log.debug("Attempting to verify token (length=%s)", len(token))
             self.user = await self._verify_token()
             _log.info("Verified token successfully.")
-            self.commands = CommandManager(self.http, self._storage, self.user.id)
+            self.commands = CommandManager(self.http, self._storage, self.user.id, self._commands_data)
             self.gateway = GatewayClient(self, self._session, token, self.intents)
             await self.gateway.connect()
             if self._setup_hook is not None:
@@ -233,8 +237,44 @@ class Bot:
             self._setup_hook = func
             return func
         return decorator
+
+    @overload
+    def command(
+        self, *,
+        guild_id: int,
+        name: str,
+        name_localizations: Localization = _MISSING,
+        description: str,
+        description_localizations: Localization = _MISSING,
+        default_member_permissions: Permissions = _MISSING,
+        nsfw: bool = False
+    ) -> Callable[..., CoroFunc]: ...
+
+    @overload
+    def command(
+        self, *,
+        name: str,
+        name_localizations: Localization = _MISSING,
+        description: str,
+        description_localizations: Localization = _MISSING,
+        default_member_permissions: Permissions = _MISSING,
+        integration_types: list[ApplicationIntegrationType] = _MISSING,
+        contexts: list[InteractionContextType] = _MISSING,
+        nsfw: bool = False
+    ) -> Callable[..., CoroFunc]: ...
         
-    def command(self, *, name: str, description: str = _MISSING) -> Callable[..., CoroFunc]:
+    def command(
+        self, *,
+        guild_id: int | None = None,
+        name: str,
+        name_localizations: Localization = _MISSING,
+        description: str,
+        description_localizations: Localization = _MISSING,
+        default_member_permissions: Permissions = _MISSING,
+        integration_types: list[ApplicationIntegrationType] = _MISSING,
+        contexts: list[InteractionContextType] = _MISSING,
+        nsfw: bool = False
+    ) -> Callable[..., CoroFunc]:
         """
         This function is a decorator.
         
@@ -255,10 +295,19 @@ class Bot:
         def decorator(func: CoroFunc) -> CoroFunc:
             if not inspect.iscoroutinefunction(func): raise TypeError(f"Command callback for '{name}:{func.__name__}' has to be a coroutine function.")
             
-            self._commands_data[name] = PartialApplicationCommand.new(
+            self._commands_data[name] = guild_id or 0, PartialApplicationCommand._from_command(
+                func,
                 name=name,
+                name_localizations=name_localizations,
                 description=description,
-                callback=func,
+                description_localizations=description_localizations,
+                default_member_permissions=default_member_permissions,
+                integration_types=integration_types,
+                contexts=contexts,
+                type=ApplicationCommandType.CHAT_INPUT,
+                nsfw=nsfw
             )
+
             return func
+
         return decorator

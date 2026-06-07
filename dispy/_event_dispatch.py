@@ -4,10 +4,11 @@ import logging
 from typing import Any, TYPE_CHECKING
 
 from .enums.channel import ChannelType
+from .enums.command import CommandOptionType
 from .enums.interaction import InteractionType
 from .objects.channel import ThreadChannel, ThreadMember, parse_channel_payload
 from .objects.guild import Guild, UnavailableGuild, parse_guild_payload
-from .objects.interaction import Interaction
+from .objects.interaction import Interaction, ResolvedData, InvokedApplicationCommandOption
 from .payloads.channel import (
     GuildChannelPayload,
     PrivateChannelPayload,
@@ -58,12 +59,42 @@ class EventDispatcher:
         for f in self.bot._listeners.get(key, []):
             asyncio.create_task(f(*args)).add_done_callback(lambda t: self._on_task_done(t, f"Function {f.__name__} listening to '{key}'"))
             _log.debug("Dispatched %s to function '%s'.", key, f.__name__)
+    
+    def _parse_options(self, resolved: ResolvedData, options: list[InvokedApplicationCommandOption]) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {}
+        for option in options:
+            match option.type:
+                case CommandOptionType.CHANNEL:
+                    assert isinstance(option.value, str)
+                    value = resolved.channels[int(option.value)]
+                case CommandOptionType.ROLE:
+                    assert isinstance(option.value, str)
+                    value = resolved.roles[int(option.value)]
+                case CommandOptionType.USER:
+                    assert isinstance(option.value, str)
+                    if (m := resolved.members.get(int(option.value))) is not None: value = m
+                    else: value = resolved.users[int(option.value)]
+                case CommandOptionType.MENTIONABLE:
+                    assert isinstance(option.value, str)
+                    val = int(option.value)
+                    if (r := resolved.roles.get(val)) is not None:
+                        value = r
+                    else:
+                        if (m := resolved.members.get(val)) is not None: value = m
+                        else: value = resolved.users[val]
+                case _:
+                    value = None
+            kwargs[option.name] = value or option.value
+        return kwargs
             
-    async def _dispatch_commands(self, name: str, interaction: Interaction, *args: Any):
-        command = self.bot._commands_data.get(name)
-        callback = command._callback if command else None
-        if callback:
-            task = asyncio.create_task(callback(interaction, *args))
+    async def _dispatch_commands(self, name: str, interaction: Interaction):
+        command_data = self.bot._commands_data.get(name)
+        callback = command_data[1]._callback if command_data else None
+        if callback and command_data:
+            assert interaction.type is InteractionType.APPLICATION_COMMAND and interaction.data is not None
+            # always checked before calling this
+            kwargs = self._parse_options(interaction.data.resolved, interaction.data.options) if interaction.data.resolved else {}
+            task = asyncio.create_task(callback(interaction, **kwargs))
             task.add_done_callback(lambda t: self._on_task_done(t, f"Handler Function {callback.__name__} for command '{name}'"))
             _log.debug("Command %s (func=%s) dispatched.", name, callback.__name__)
         else:

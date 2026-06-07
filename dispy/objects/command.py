@@ -1,4 +1,9 @@
 from __future__ import annotations
+
+import inspect
+import types
+from typing import get_origin, get_args
+
 from collections.abc import Callable, Coroutine
 from typing import Any, Literal, Self, overload
 
@@ -17,13 +22,20 @@ from ..payloads.command import (
 from .permissions import Permissions
 from .snowflake import Snowflake
 
+from .user import User
+from .channel import Channel, PartialGuildChannel, PartialThreadChannel
+from .role import Role
+
 __all__ = (
+    "Mentionable",
     "Localization",
     "ApplicationCommandOption",
     "ApplicationCommandChoice",
     "PartialApplicationCommand",
     "ApplicationCommand"
 )
+
+class Mentionable: ...
 
 class Localization:
     __slots__ = (
@@ -140,7 +152,7 @@ class ApplicationCommandOption:
         self.max_value = data.get("max_value")
         self.min_length = data.get("min_length")
         self.max_length = data.get("max_length")
-        self.autocomplete= data.get("autocomplete", False)
+        self.autocomplete = data.get("autocomplete")
 
     @overload
     @classmethod
@@ -167,7 +179,7 @@ class ApplicationCommandOption:
         choices: list[ApplicationCommandChoice] = _MISSING,
         min_length: int = _MISSING,
         max_length: int = _MISSING,
-        autocomplete: bool = False
+        autocomplete: bool = _MISSING
     ) -> Self: ...
 
     @overload
@@ -183,7 +195,7 @@ class ApplicationCommandOption:
         choices: list[ApplicationCommandChoice] = _MISSING,
         min_value: int = _MISSING,
         max_value: int = _MISSING,
-        autocomplete: bool = False
+        autocomplete: bool = _MISSING
     ) -> Self: ...
 
     @overload
@@ -230,7 +242,7 @@ class ApplicationCommandOption:
         choices: list[ApplicationCommandChoice] = _MISSING,
         min_value: float = _MISSING,
         max_value: float = _MISSING,
-        autocomplete: bool = False
+        autocomplete: bool = _MISSING
     ) -> Self: ...
 
     @classmethod
@@ -249,7 +261,7 @@ class ApplicationCommandOption:
         max_value: int | float = _MISSING,
         min_length: int = _MISSING,
         max_length: int = _MISSING,
-        autocomplete: bool = False
+        autocomplete: bool = _MISSING
     ) -> Self:
         return assign_val(
             cls(CommandOptionPayload(
@@ -257,7 +269,6 @@ class ApplicationCommandOption:
                 name=name,
                 description=description,
                 required=required,
-                autocomplete=autocomplete
             )),
             name_localizations=name_localizations,
             description_localizations=description_localizations,
@@ -267,7 +278,8 @@ class ApplicationCommandOption:
             min_value=min_value,
             max_value=max_value,
             min_length=min_length,
-            max_length=max_length
+            max_length=max_length,
+            autocomplete=autocomplete
         )
 
     def _to_dict(self) -> CommandOptionPayload:
@@ -277,7 +289,6 @@ class ApplicationCommandOption:
                 name=self.name,
                 description=self.description,
                 required=self.required,
-                autocomplete=self.autocomplete
             ),
             name_localizations=mtd(self.name_localizations),
             description_localizations=mtd(self.description_localizations),
@@ -288,6 +299,7 @@ class ApplicationCommandOption:
             max_value=self.max_value,
             min_length=self.min_length,
             max_length=self.max_length,
+            autocomplete=self.autocomplete
         )
 
 type CoroFunc = Callable[..., Coroutine[Any, Any, Any]]
@@ -315,6 +327,18 @@ class BaseApplicationCommand:
         self.contexts = [InteractionContextType(i) for i in d] if (d := data.get("contexts")) is not None else None
 
 class PartialApplicationCommand(BaseApplicationCommand):
+    _TYPE_MAP = {
+        str: CommandOptionType.STRING,
+        int: CommandOptionType.INTEGER,
+        bool: CommandOptionType.BOOLEAN,
+        float: CommandOptionType.NUMBER,
+        User: CommandOptionType.USER,
+        Role: CommandOptionType.ROLE,
+        PartialGuildChannel: CommandOptionType.CHANNEL,
+        PartialThreadChannel: CommandOptionType.CHANNEL,
+        Mentionable: CommandOptionType.MENTIONABLE
+    }
+
     __slots__ = (
         "description",
         "default_member_permissions",
@@ -355,6 +379,69 @@ class PartialApplicationCommand(BaseApplicationCommand):
             integration_types=integration_types,
             contexts=contexts,
             nsfw=nsfw,
+        )
+
+    @classmethod
+    def _from_command(
+        cls, func: CoroFunc,
+        *,
+        name: str,
+        name_localizations: Localization = _MISSING,
+        description: str = _MISSING,
+        description_localizations: Localization = _MISSING,
+        default_member_permissions: Permissions = _MISSING,
+        integration_types: list[ApplicationIntegrationType] = _MISSING,
+        contexts: list[InteractionContextType] = _MISSING,
+        type: ApplicationCommandType = ApplicationCommandType.CHAT_INPUT,
+        nsfw: bool = False
+    ) -> Self:
+        parameters = list(inspect.signature(func).parameters.values())
+        options: list[ApplicationCommandOption] = []
+        for param in parameters[1:]:
+            annotation = param.annotation
+
+            if annotation is inspect.Parameter.empty:
+                raise ValueError(f"No type hint for slash command '{name}', function={func.__name__}: '{param.name}'")
+
+            origin = get_origin(annotation)
+
+            match origin:
+                case types.UnionType:
+                    union = get_args(annotations)
+                    # for now only looking at the first possible val
+                    option_type = cls._TYPE_MAP.get(union[0])
+                    if option_type is None:
+                        raise ValueError(f"Unknown type hint for slash command 'command name={name}, function={func.__name__}': '{union[0]}'")
+                case None:
+                    if inspect.isclass(annotation) or annotation is Channel:
+                        option_type = cls._TYPE_MAP.get(annotation)
+                        if option_type is None:
+                            raise ValueError(f"Unknown type hint for slash command 'command name={name}, function={func.__name__}': '{annotation}'")
+                    else:
+                        raise ValueError(f"Unknown type hint for slash command 'command name={name}, function={func.__name__}': '{annotation}'")
+                case _:
+                    raise ValueError(f"Unsupported generic type hint for slash command '{name}', function={func.__name__}: '{annotation}'")
+            
+            options.append(
+                ApplicationCommandOption.new(
+                    type=option_type,
+                    name=param.name,
+                    description="..."
+                )
+            )
+        
+        return cls.new(
+            name=name,
+            name_localizations=name_localizations,
+            description=description,
+            description_localizations=description_localizations,
+            options=options,
+            default_member_permissions=default_member_permissions,
+            integration_types=integration_types,
+            contexts=contexts,
+            type=type,
+            nsfw=nsfw,
+            callback=func
         )
 
     def _to_dict(self) -> PartialApplicationCommandPayload:

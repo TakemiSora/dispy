@@ -29,7 +29,7 @@ from .._utils import scls, _MISSING
 from .channel import parse_channel_payload
 from .embed import Embed
 from .guild import Guild
-from .member import Member, PartialMember
+from .member import Member, PartialMember, ResolvedMember
 from .message import Attachment, Message, PartialMessage, AllowedMentions
 from .permissions import Permissions
 from .role import Role
@@ -52,12 +52,38 @@ class ResolvedData:
     )
 
     def __init__(self, data: ResolvedDataPayload, *, guild_id: int | None):
-        self.users = {Snowflake(id): User(payload) for id, payload in data.get("users", {}).items()}
-        self.members = {Snowflake(id): PartialMember(payload, guild_id=guild_id, user_id=int(id)) for id, payload in data.get("members", {}).items()} if guild_id is not None else {}
-        self.roles = {Snowflake(id): Role(payload) for id, payload in data.get("roles", {}).items()}
-        self.channels = {Snowflake(id): parse_channel_payload(payload, partial=True) for id, payload in data.get("channels", {}).items()}
-        self.messages = {Snowflake(id): PartialMessage(payload) for id, payload in data.get("messages", {}).items()}
-        self.attachments = {Snowflake(id): Attachment(payload) for id, payload in data.get("attachments", {}).items()}
+        self.users = {
+            int(id): User(payload)
+            for id, payload in data.get("users", {}).items()
+        }
+
+        self.members = {
+            int(id): ResolvedMember._from_partial_member(
+                PartialMember(payload, guild_id=guild_id, user_id=int(id)),
+                user=self.users[int(id)]
+            )
+            for id, payload in data.get("members", {}).items()
+        } if guild_id is not None else {}
+
+        self.roles = {
+            int(id): Role(payload)
+            for id, payload in data.get("roles", {}).items()
+        }
+
+        self.channels = {
+            int(id): parse_channel_payload(payload, partial=True)
+            for id, payload in data.get("channels", {}).items()
+        }
+
+        self.messages = {
+            int(id): PartialMessage(payload)
+            for id, payload in data.get("messages", {}).items()
+        }
+
+        self.attachments = {
+            int(id): Attachment(payload)
+            for id, payload in data.get("attachments", {}).items()
+        }
         
 class InvokedApplicationCommandOption:
     __slots__ = (

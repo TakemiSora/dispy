@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import overload
+from typing import overload, Self
 
 from ..flags import GuildMemberFlags
 from ..payloads.member import MemberPayload, PartialMemberPayload
@@ -67,6 +67,17 @@ class PartialMember:
         if isinstance(obj, self.__class__):
             return self.id == obj.id
         return NotImplemented
+
+class ResolvedMember(PartialMember):
+    __slots__ = ("user",)
+
+    @classmethod
+    def _from_partial_member(cls, member: PartialMember, *, user: User) -> Self:
+        self = cls.__new__(cls)
+        for slot in PartialMember.__slots__:
+            setattr(self, slot, getattr(member, slot))
+        self.user = user
+        return self
 
 class Member(PartialMember):
     __slots__ = (

@@ -225,8 +225,8 @@ class CommandManager(BaseManager):
         
     @overload
     async def edit(
-        self, *,
-        command_id: int,
+        self, command_id: int,
+        *,
         guild_id: int,
         name: str = _MISSING,
         name_localizations: Localization | None = _MISSING,
@@ -239,8 +239,8 @@ class CommandManager(BaseManager):
     
     @overload
     async def edit(
-        self, *,
-        command_id: int,
+        self, command_id: int,
+        *,
         name: str = _MISSING,
         name_localizations: Localization | None = _MISSING,
         description: str = _MISSING,
@@ -253,8 +253,8 @@ class CommandManager(BaseManager):
     ) -> ApplicationCommand: ...
 
     async def edit(
-        self, *,
-        command_id: int,
+        self, command_id: int,
+        *,
         guild_id: int | None = None,
         name: str = _MISSING,
         name_localizations: Localization | None = _MISSING,

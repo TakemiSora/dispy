@@ -21,7 +21,7 @@ bot = mizuki.Bot(
 @bot.setup()
 async def setup():
     commands = await bot.commands.sync_all()
-    print(f"Synced {len(commands} commands!")
+    print(f"Synced {len(commands)} commands!")
 
 @bot.command(name="ping", description="Send a ping to the bot")
 async def ping(interaction: mizuki.Interaction):

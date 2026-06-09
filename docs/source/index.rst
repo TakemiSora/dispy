@@ -4,9 +4,13 @@
    contain the root `toctree` directive.
 
 mizuki Documentation
-===================
+====================
 
 A modern async-based discord API wrapper written for Python. Currently in early development, not meant to be used in production as of now.
+
+.. important::
+
+   Mizuki is currently in early development. Parts of the API and documentation may be incomplete or subject to change before a stable release.
 
 Quick Example
 -------------
@@ -16,15 +20,20 @@ Quick Example
    import mizuki
 
    bot = mizuki.Bot(
-      intents=mizuki.IntentFlags.standard()
+       intents=mizuki.IntentFlags.standard()
    )
 
+   @bot.setup()
+   async def setup():
+       commands = await bot.commands.sync_all()
+       print(f"Synced {len(commands)} commands!")
+
    @bot.command(
-      name="ping",
-      description="Pings the bot!"
+       name="ping",
+       description="Pings the bot!"
    )
    async def ping(interaction: mizuki.Interaction):
-      await interaction.response.send_message("Pong!")
+       await interaction.response.send_message("Pong!")
 
    bot.run("TOKEN-HERE")
 

@@ -1,6 +1,6 @@
 from typing import Any, overload
 
-from .._utils import _MISSING, assign_val, assign_val_dict, mtd
+from .._utils import _MISSING, assign_val_dict, mtd
 from ..enums.message import MessageReferenceType, ReactionType
 from ..flags import MessageFlags
 from ..http import Path
@@ -722,4 +722,152 @@ class MessageManager(BaseManager):
             "DELETE",
             channel_id=channel_id,
             message_id=message_id
+        )
+        
+    async def edit(
+        self, *,
+        channel_id: int,
+        message_id: int,
+        content: str | None = _MISSING,
+        embeds: list[Embed] = _MISSING,
+        flags: MessageFlags = _MISSING,
+        allowed_mentions: AllowedMentions | None = _MISSING
+    ) -> Message:
+        """
+        Edits a message sent by you.
+        
+        Parameters
+        ----------
+        channel_id : :class:`int` | :class:`None`
+            The ID of the channel the target message is in. Pass ``None`` to clear content.
+        
+        message_id : :class:`int`
+            The ID of the target message.
+        
+        content : :class:`str`
+            The content of the message.
+        
+        embeds : list[:class:`Embed <mizuki.objects.embed.Embed>`]
+            The embeds of the message.
+        
+        flags : :class:`MessageFlags <mizuki.flags.MessageFlags>`
+            The flags of the message.
+        
+        allowed_mentions : :class:`AllowedMentions <mizuki.objects.message.AllowedMentions>` | :class:`None`
+            The AllowedMentions object that dictates whether user, role or everyone pings are enabled. Pass ``None`` to set this back to default.
+            
+        Raises
+        ------
+        :class:`NotFound`
+            The message you tried to edit was not found.
+            
+        :class:`Forbidden`
+            You are not allowed to edit that message.
+            
+        :class:`HTTPException`
+            A HTTP error occurred.
+        """
+        return self._cache_storage.update_messages(
+            Message(await self._http.request(
+                Path(
+                    "PATCH",
+                    "channels/{channel_id}/messages/{message_id}",
+                    channel_id=channel_id,
+                    message_id=message_id
+                ),
+                json=assign_val_dict(
+                    {}, _MISSING,
+                    content=content,
+                    embeds=(
+                        [e._to_dict() for e in embeds]
+                        if embeds is not _MISSING
+                        else _MISSING
+                    ),
+                    flags=(
+                        flags.value
+                        if flags is not _MISSING
+                        else _MISSING
+                    ),
+                    allowed_mentions=mtd(allowed_mentions)
+                )
+            ))
+        )
+        
+    async def delete(
+        self, *,
+        channel_id: int,
+        message_id: int
+    ) -> None:
+        """
+        Deletes a message from a channel.
+        
+        This method requires :attr:`MANAGE_MESSAGES <mizuki.objects.permissions.Permissions.MANAGE_MESSAGES>` if deleting a message from someone else.
+        
+        Parameters
+        ----------
+        channel_id : :class:`int`
+            The ID of the channel to delete the message from.
+        
+        message_id : :class:`int`
+            The ID of the message to delete.
+        
+        Raises
+        ------
+        :class:`NotFound`
+            The message you tried to delete does not exist.
+        
+        :class:`Forbidden`
+            You are not allowed to delete that message.
+            
+        :class:`HTTPException`
+            A HTTP error occurred.
+        """
+        await self._http.request(
+            Path(
+                "DELETE",
+                "channels/{channel_id}/messages/{message_id}",
+                channel_id=channel_id,
+                message_id=message_id
+            )
+        )
+        self._cache_storage.remove_message(message_id)
+    
+    async def bulk_delete(
+        self, *,
+        channel_id: int,
+        message_ids: list[int]
+    ) -> None:
+        """
+        Bulk deletes messages from a channel.
+        
+        This method requires :attr:`MANAGE_MESSAGES <mizuki.objects.permissions.Permissions.MANAGE_MESSAGES>`.
+        
+        Parameters
+        ----------
+        channel_id : :class:`int`
+            The ID of the channel to delete the message from.
+            
+        message_ids : list[:class:`int`]
+            The list of ID of the messages to delete. Minimum and maximum length of list required are 2 and 100 respectively.
+            
+        Raises
+        ------
+        :class:`NotFound`
+            The channel you tried to bulk delete from does not exist.
+        
+        :class:`Forbidden`
+            You do not have the required permission to bulk delete.
+            
+        :class:`HTTPException`
+            A HTTP error occurred.
+        """
+        await self._http.request(
+            Path(
+                "POST",
+                "channels/{channel_id}/messages/bulk-delete",
+                channel_id=channel_id
+            ),
+            json={
+                "message_ids": message_ids
+            }
         )

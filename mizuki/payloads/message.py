@@ -146,3 +146,7 @@ class MessagePayload(PartialMessagePayload, total=False):
     poll: PollPayload
     # call skipped as never accessible
     shared_client_theme: SharedClientThemePayload
+
+class MessagePinPayload(TypedDict):
+    pinned_at: ISO8601Timestamp
+    message: MessagePayload

@@ -17,6 +17,7 @@ from ..payloads.message import (
     MessageActivityPayload,
     MessageInteractionMetadataPayload,
     MessagePayload,
+    MessagePinPayload,
     MessageReferencePayload,
     MessageSnapshotPayload,
     PartialMessagePayload,
@@ -366,3 +367,13 @@ class Message(PartialMessage):
         self.role_subscription_data = scls(RoleSubscriptionData, data.get("role_subscription_data"))
         self.poll = scls(Poll, data.get("poll"))
         self.shared_client_theme = scls(SharedClientTheme, data.get("shared_client_theme"))
+    
+class MessagePin:
+    __slots__ = (
+        "pinned_at",
+        "message"
+    )
+    
+    def __init__(self, data: MessagePinPayload):
+        self.pinned_at = datetime.fromisoformat(data["pinned_at"])
+        self.message = Message(data["message"])

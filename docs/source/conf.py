@@ -53,6 +53,8 @@ html_context = {
 
 html_static_path = ['_static']
 
+html_favicon = '_static/logo.png'
+
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../'))

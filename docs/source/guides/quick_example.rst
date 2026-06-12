@@ -34,7 +34,7 @@ The first line just imports the library.
     import mizuki
     
 
-Next up we create an instance of a Bot with :class:`mizuki.Bot <mizuki.bot.Bot>` with the parameter intents. :class:`mizuki.IntentFlags <mizuki.flags.IntentFlags>` define the events which your bot gets from Discord. Here we use :meth:`mizuki.IntentFlags.standard() <mizuki.flags.IntentFlags.standard>` to enable all non-privileged intents. You can learn more about intents here placeholderlinkwow.
+Next up we create an instance of a Bot with :class:`mizuki.Bot <mizuki.bot.Bot>` with the parameter intents. :class:`mizuki.IntentFlags <mizuki.flags.IntentFlags>` define the events which your bot gets from Discord. Here we use :meth:`mizuki.IntentFlags.standard() <mizuki.flags.IntentFlags.standard>` to enable all non-privileged intents. You can learn more about intents :doc:`here </guides/intents>`.
 
 .. code-block:: python
 

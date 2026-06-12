@@ -7,3 +7,4 @@ Guides
     guides/getting_started
     guides/dev_portal_guide
     guides/quick_example
+    guides/intents

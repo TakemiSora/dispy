@@ -92,4 +92,71 @@ Finally, we run the bot using :meth:`Bot.run() <mizuki.bot.Bot.run>` with the to
     bot.run("TOKEN-HERE")
     
     
-You have made your first Discord bot!
+.. important::
+    
+    You should never hardcode your tokens in a production bot or commit them to version control. See the next section for recommended approaches.
+
+    
+You have made your first Discord bot! You can run it by :ref:`activating your venv <venvs>` and running the python file.
+
+Protecting your Tokens
+----------------------
+
+While putting your tokens directly into the code is simple, it is not the recommended way to store sensitive info like passwords and token. For this guide, we will be using ``python-dotenv``.
+
+First start by adding ``python-dotenv`` to your dependencies and install it.
+
+.. tab-set::
+    :class: outline
+    
+    .. tab-item:: :iconify:`material-icon-theme:uv` uv
+        
+        .. code-block:: bash
+        
+            uv add python-dotenv
+        
+        
+    .. tab-item:: :iconify:`vscode-icons:file-type-python` venv
+    
+        Activate your Virtual Environment as shown in :ref:`Managing Virtual Environments <venvs>`.
+        
+        .. code-block:: bash
+        
+            pip install python-dotenv
+            
+            
+After installing the package, make a file named ``.env`` and put yout token in the ``.env`` file like:
+    
+.. code-block::
+    :caption: .env
+    
+    DISCORD_TOKEN=TWl6dWVuYUlzUGVha1l1cmlXZUxvdmVNaXp1RW5h
+    
+
+.. note::
+    
+    ``DISCORD_TOKEN`` is just a variable name and it can be named anything. Replace the TWl....W5h with your own bot's token.
+    
+
+Inside your code you can now get the token by doing:
+    
+.. code-block:: python
+    
+    import os
+    from dotenv import load_dotenv
+    
+    load_dotenv()
+    
+    TOKEN = os.getenv("DISCORD_TOKEN")
+
+
+.. important::
+
+    If you are using git to track your project, create a file named ``.gitignore`` in the root of your project (alongside ``.env``) and add the following:
+
+    .. code-block::
+        :caption: .gitignore
+
+        .env
+
+    This prevents the ``.env`` file from being tracked by git, helping ensure that sensitive information such as your bot token is not accidentally committed.

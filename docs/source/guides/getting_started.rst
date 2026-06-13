@@ -8,7 +8,9 @@ You can install the library from PyPI by doing:
 .. code-block:: bash
     
     pip install mizuki
-  
+
+    
+.. _venvs:
       
 Managing Virtual Environments
 -----------------------------
